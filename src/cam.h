@@ -93,6 +93,8 @@ void cam_init()
     bflb_irq_attach(gpio->irq_num, cam_isr, gpio);
     bflb_irq_enable(gpio->irq_num);
 
+    bflb_gpio_init(gpio, PIN_XCLK, GPIO_FUNC_PWM0 | GPIO_ALTERNATE | GPIO_PULLDOWN | GPIO_SMT_EN | GPIO_DRV_1);
+    
     /* period = .XCLK / .clk_div / .period = 40MHz / 4 / 10 = 1000KHz */
     struct bflb_pwm_v2_config_s cfg = {
         .clk_source = BFLB_SYSTEM_XCLK,
