@@ -1,6 +1,6 @@
 #include "bflb_mtimer.h"
-#include "cam.h"
 #include "board.h"
+#include "cam.h"
 int main(void)
 {
     board_init();

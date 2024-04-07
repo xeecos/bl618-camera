@@ -17,6 +17,9 @@
 #define PIN_D6      GPIO_PIN_16
 #define PIN_D7      GPIO_PIN_17
 
+#define BF3003_ADDR                0x6E
+#define BF3003_PID_ADDR            0xFC
+
 struct bflb_device_s *gpio;
 struct bflb_device_s *pwm;
 static struct bflb_device_s *i2c0;
@@ -35,12 +38,49 @@ void cam_isr(int irq, void *arg)
         bflb_gpio_int_clear(gpio, PIN_PCLK);
     }
 }
+uint8_t cam_sensor_read(uint8_t address)
+{
+    struct bflb_i2c_msg_s msgs[2];
+    uint8_t buffer[2];
+    uint8_t readOut[1];
+    
+    msgs[0].addr = BF3003_ADDR;
+    msgs[0].flags = I2C_M_NOSTOP;
+    msgs[0].buffer = NULL;
+    msgs[0].length = 1;
+
+    msgs[1].addr = BF3003_ADDR;
+    msgs[1].flags = I2C_M_READ;
+    msgs[1].buffer = NULL;
+    msgs[1].length = 1;
+    
+    buffer[0] = address & 0xff;
+    msgs[0].buffer = buffer;
+    msgs[1].buffer = readOut;
+    bflb_i2c_transfer(i2c0, msgs, 2);
+    return readOut[0];
+}
+void cam_probe()
+{
+    while(1)
+    {
+        if(cam_sensor_read(BF3003_PID_ADDR) == 0x30)
+        {
+            break;
+        }
+        bflb_mtimer_delay_ms(1000);
+    }
+}
 void cam_init()
 {
     pwm = bflb_device_get_by_name("pwm_v2_0");
     gpio = bflb_device_get_by_name("gpio");
     i2c0 = bflb_device_get_by_name("i2c0");
 
+    bflb_i2c_init(i2c0, 100000);
+
+    cam_probe();
+    
     bflb_gpio_int_init(gpio, PIN_VSYNC, GPIO_INT_TRIG_MODE_SYNC_RISING_EDGE);
     bflb_gpio_int_mask(gpio, PIN_VSYNC, false);
 
@@ -65,4 +105,3 @@ void cam_init()
     bflb_pwm_v2_channel_positive_start(pwm, PWM_CH0);
     bflb_pwm_v2_start(pwm);
 }
-    
