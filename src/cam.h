@@ -1,5 +1,6 @@
 #pragma once
 #include "bflb_gpio.h"
+#include "bflb_i2c.h"
 #include "bflb_pwm_v2.h"
 #include "bflb_clock.h"
 
