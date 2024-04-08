@@ -12,19 +12,25 @@ struct bflb_device_s *i2c0;
 struct bflb_device_s *uartx;
 
 uint8_t frame[2][640];
-int lineCount = 0;
+uint16_t lineCount = 0;
 int led = 0;
-int pixelCount = 0;
 void cam_isr(int irq, void *arg)
 {
-    if (bflb_gpio_get_intstatus(gpio, PIN_PCLK)) 
-    {
-        bflb_gpio_int_clear(gpio, PIN_PCLK);
-        pixelCount++;
-    }
+    // if (bflb_gpio_get_intstatus(gpio, PIN_PCLK)) 
+    // {
+    //     bflb_gpio_int_clear(gpio, PIN_PCLK);
+    //     pixelCount++;
+    // }
     if (bflb_gpio_get_intstatus(gpio, PIN_HREF)) 
     {
         bflb_gpio_int_clear(gpio, PIN_HREF);
+        int frameIdx = lineCount&1;
+        for(int i=0;i<640;i++)
+        {
+            frame[frameIdx][i] = (i>>5)<<2;
+        }
+        frame[frameIdx][0] = lineCount>>8;
+        frame[frameIdx][1] = lineCount&0xff;
 		lineCount++;
     }
     if (bflb_gpio_get_intstatus(gpio, PIN_VSYNC)) 
@@ -35,7 +41,6 @@ void cam_isr(int irq, void *arg)
 		led = 1-led;
 		// printf("frame:%d\n",pixelCount);
 		lineCount = 0;
-        pixelCount = 0;
     }
 }
 uint8_t cam_sensor_read(uint8_t address)
@@ -105,9 +110,11 @@ void cam_init()
     pwm = bflb_device_get_by_name("pwm_v2_0");
     gpio = bflb_device_get_by_name("gpio");
     
+    bflb_gpio_init(gpio, GPIO_PIN_29, GPIO_OUTPUT | GPIO_PULLUP | GPIO_SMT_EN | GPIO_DRV_0);
+    
+    
     bflb_gpio_uart_init(gpio, GPIO_PIN_21, GPIO_UART_FUNC_UART0_TX);
     bflb_gpio_uart_init(gpio, GPIO_PIN_22, GPIO_UART_FUNC_UART0_RX);
-    bflb_gpio_init(gpio, GPIO_PIN_29, GPIO_OUTPUT | GPIO_PULLUP | GPIO_SMT_EN | GPIO_DRV_0);
 
     uartx = bflb_device_get_by_name("uart0");
 
@@ -137,8 +144,8 @@ void cam_init()
     bflb_gpio_int_init(gpio, PIN_HREF, GPIO_INT_TRIG_MODE_SYNC_RISING_EDGE);
     bflb_gpio_int_mask(gpio, PIN_HREF, false);
 
-    bflb_gpio_int_init(gpio, PIN_PCLK, GPIO_INT_TRIG_MODE_SYNC_RISING_EDGE);
-    bflb_gpio_int_mask(gpio, PIN_PCLK, false);
+    // bflb_gpio_int_init(gpio, PIN_PCLK, GPIO_INT_TRIG_MODE_SYNC_RISING_EDGE);
+    // bflb_gpio_int_mask(gpio, PIN_PCLK, false);
 
     bflb_irq_attach(gpio->irq_num, cam_isr, gpio);
     bflb_irq_enable(gpio->irq_num);

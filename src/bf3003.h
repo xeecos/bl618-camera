@@ -160,7 +160,7 @@ static struct image_sensor_command_s bf3003_init_list[] = {
 		06h: G3HR5,B5G3L 07h: G3LR5,B5G3H
 		08h: G6B2H,B3LR5 09h: G6R2H,R3LB5
 	*/
-	{BF3003_COM8, 0b00010000},
+	{BF3003_COM8, 0b00010110},
 	/*
 		Auto mode Contrl
 		Bit[7:6] reserved
