@@ -1,0 +1,2 @@
+cd ./project
+make clean
