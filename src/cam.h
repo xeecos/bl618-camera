@@ -33,7 +33,7 @@ void cam_isr(int irq, void *arg)
         if(led)bflb_gpio_set(gpio, GPIO_PIN_29);
 		else bflb_gpio_reset(gpio, GPIO_PIN_29);
 		led = 1-led;
-		printf("frame:%d\n",pixelCount);
+		// printf("frame:%d\n",pixelCount);
 		lineCount = 0;
         pixelCount = 0;
     }
@@ -156,6 +156,4 @@ void cam_init()
     bflb_pwm_v2_channel_set_threshold(pwm, PWM_CH0, 1, 3); 
     bflb_pwm_v2_channel_positive_start(pwm, PWM_CH0);
     bflb_pwm_v2_start(pwm);
-    while(bflb_gpio_read(gpio,PIN_PCLK));
-    while(!bflb_gpio_read(gpio,PIN_PCLK));
 }
