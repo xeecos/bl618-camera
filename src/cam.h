@@ -147,7 +147,7 @@ void cam_init()
 
     /* period = .XCLK / .clk_div / .period = 40MHz / 4 / 10 = 1000KHz */
     struct bflb_pwm_v2_config_s pwm_cfg = {
-        .clk_source = BFLB_SYSTEM_XCLK,
+        .clk_source = BFLB_SYSTEM_PBCLK,
         .clk_div = 1,
         .period = 4,
     };
