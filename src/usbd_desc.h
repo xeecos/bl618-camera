@@ -87,8 +87,8 @@ uint8_t video_descriptor[] = {
     0x00,   /* iInterface: */
 
     /*Endpoint OUT Descriptor*/
-    0x07,   /* bLength: Endpoint Descriptor size */
-    0x05,       /* bDescriptorType: Endpoint */
+    0x07,                               /* bLength: Endpoint Descriptor size */
+    0x05,                               /* bDescriptorType: Endpoint */
     0x02,                               /* bEndpointAddress */
     0x02,                               /* bmAttributes: Control 0x0 Isochronous 0x1 Bulk 0x2 Interrupt 0x3*/
     0x40,                               /* wMaxPacketSize: */

@@ -3,6 +3,7 @@
 #include "cam.h"
 // #include "usbd_desc.h"
 
+extern void usbd_init(void);
 int main(void)
 {
     board_init();
@@ -16,6 +17,7 @@ int main(void)
     //     len++;
     // }
     cam_init();
+    usbd_init();
     while (1) 
     {
         // printf("size:%d\n",len);

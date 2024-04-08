@@ -75,7 +75,7 @@ struct usbd_endpoint cdc_in_ep = {
 struct usbd_interface intf0;
 struct usbd_interface intf1;
 
-void video_init()
+void usbd_init()
 {
     usbd_desc_register(video_descriptor);
     struct usb_msosv1_descriptor *desc = {"MSFT100",0xA0};
