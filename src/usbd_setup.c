@@ -4,6 +4,7 @@
 
 volatile bool ep_tx_busy_flag = true;
 USB_NOCACHE_RAM_SECTION USB_MEM_ALIGNX uint8_t read_buffer[2048];
+USB_NOCACHE_RAM_SECTION USB_MEM_ALIGNX uint8_t write_buffer[2048];
 USB_NOCACHE_RAM_SECTION USB_MEM_ALIGNX uint8_t frame[2048];
 void usbd_event_handler(uint8_t event)
 {
@@ -20,6 +21,7 @@ void usbd_event_handler(uint8_t event)
             break;
         case USBD_EVENT_CONFIGURED:
             /* setup first out ep read transfer */
+            ep_tx_busy_flag = false;
             usbd_ep_start_read(2, read_buffer, 2048);
             break;
         case USBD_EVENT_SET_REMOTE_WAKEUP:
@@ -34,13 +36,17 @@ void usbd_event_handler(uint8_t event)
 
 void usbd_cdc_acm_bulk_out(uint8_t ep, uint32_t nbytes)
 {
-    usbd_ep_start_read(0x02, read_buffer, nbytes);
+    usbd_ep_start_read(0x02, read_buffer, 2048);
 }
 
-uint8_t buf[8] = {1,1,2,2,3,3,4,4};
 void usbd_cdc_acm_bulk_in(uint8_t ep, uint32_t nbytes)
 {
-    usbd_ep_start_write(0x81, buf, nbytes);
+    if ((nbytes % 0x200) == 0 && nbytes) {
+        /* send zlp */
+        usbd_ep_start_write(0x81, write_buffer, 0);
+    } else {
+        ep_tx_busy_flag = false;
+    }
 }
 
 struct usbd_endpoint cdc_out_ep = {
@@ -60,7 +66,7 @@ void video_loop()
     if(ep_tx_busy_flag==false)
     {
         ep_tx_busy_flag = true;
-        usbd_ep_start_write(0x81, read_buffer, 640);
+        usbd_ep_start_write(0x81, write_buffer, 8);
     }
     
 }
