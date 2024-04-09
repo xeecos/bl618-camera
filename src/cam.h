@@ -1,4 +1,6 @@
 #pragma once
+#include "usb_config.h"
+#include "usb_util.h"
 #include "bflb_gpio.h"
 #include "bflb_i2c.h"
 #include "bflb_uart.h"
@@ -11,7 +13,7 @@ struct bflb_device_s *pwm;
 struct bflb_device_s *i2c0;
 struct bflb_device_s *uartx;
 
-uint8_t frame[2][640];
+extern USB_NOCACHE_RAM_SECTION USB_MEM_ALIGNX uint8_t frame[2048];
 uint16_t lineCount = 0;
 int led = 0;
 void cam_isr(int irq, void *arg)
@@ -25,21 +27,22 @@ void cam_isr(int irq, void *arg)
     {
         bflb_gpio_int_clear(gpio, PIN_HREF);
         int frameIdx = lineCount&1;
+        int offset = frameIdx*640;
         for(int i=0;i<640;i++)
         {
-            frame[frameIdx][i] = (i>>5)<<2;
+            frame[offset+i] = (i>>5)<<2;
         }
-        frame[frameIdx][0] = lineCount>>8;
-        frame[frameIdx][1] = lineCount&0xff;
+        frame[offset] = lineCount>>8;
+        frame[offset+1] = lineCount&0xff;
 		lineCount++;
     }
     if (bflb_gpio_get_intstatus(gpio, PIN_VSYNC)) 
     {
         bflb_gpio_int_clear(gpio, PIN_VSYNC);
-        if(led)bflb_gpio_set(gpio, GPIO_PIN_29);
-		else bflb_gpio_reset(gpio, GPIO_PIN_29);
-		led = 1-led;
 		// printf("frame:%d\n",pixelCount);
+        if(led)bflb_gpio_set(gpio, GPIO_PIN_29);
+        else bflb_gpio_reset(gpio, GPIO_PIN_29);
+        led = 1-led;
 		lineCount = 0;
     }
 }
@@ -155,7 +158,7 @@ void cam_init()
     /* period = .XCLK / .clk_div / .period = 40MHz / 4 / 10 = 1000KHz */
     struct bflb_pwm_v2_config_s pwm_cfg = {
         .clk_source = BFLB_SYSTEM_PBCLK,
-        .clk_div = 1,
+        .clk_div = 8,
         .period = 4,
     };
 

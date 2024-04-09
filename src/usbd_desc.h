@@ -44,9 +44,9 @@ uint8_t video_descriptor[] = {
     /*Configuration Descriptor*/
     0x09,       /* bLength: Configuration Descriptor size */
     0x02,      /* bDescriptorType: Configuration */
-    41,                /* wTotalLength:no of returned bytes */
+    32,                /* wTotalLength:no of returned bytes */
     0x00,
-    0x02,   /* bNumInterfaces: 1 interface for Game IO */
+    0x01,   /* bNumInterfaces: 1 interface for Game IO */
     0x01,   /* bConfigurationValue: Configuration value */
     0x00,   /* iConfiguration: Index of string descriptor describing the configuration */
     0xE0,   /* bmAttributes: self powered */
@@ -59,7 +59,7 @@ uint8_t video_descriptor[] = {
     0x04,  /* bDescriptorType: */
     0x00,   /* bInterfaceNumber: Number of Interface, zero based index of this interface */
     0x00,   /* bAlternateSetting: Alternate setting */
-    0x01,   /* bNumEndpoints: Two endpoints used */
+    0x02,   /* bNumEndpoints: Two endpoints used */
     0x00,   /* bInterfaceClass: vendor */
     0x00,   /* bInterfaceSubClass: */
     0x00,   /* bInterfaceProtocol: */
@@ -70,29 +70,29 @@ uint8_t video_descriptor[] = {
     0x05,                              /* bDescriptorType: Endpoint */
     0x81,                               /* bEndpointAddress */
     0x02,                               /* bmAttributes: Bulk */
-    0x40,                               /* wMaxPacketSize: */
-    0x00,
+    0x00,                               /* wMaxPacketSize: */
+    0x02,
     0x00,                                /* bInterval: ignore for Bulk transfer */
 
     
-    /*Data class interface descriptor*/
-    0x09,   /* bLength: Endpoint Descriptor size */
-    0x04,  /* bDescriptorType: */
-    0x01,   /* bInterfaceNumber: Number of Interface, zero based index of this interface */
-    0x00,   /* bAlternateSetting: Alternate setting */
-    0x01,   /* bNumEndpoints: Two endpoints used */
-    0x00,   /* bInterfaceClass: vendor */
-    0x00,   /* bInterfaceSubClass: */
-    0x00,   /* bInterfaceProtocol: */
-    0x00,   /* iInterface: */
+    // /*Data class interface descriptor*/
+    // 0x09,   /* bLength: Endpoint Descriptor size */
+    // 0x04,  /* bDescriptorType: */
+    // 0x01,   /* bInterfaceNumber: Number of Interface, zero based index of this interface */
+    // 0x00,   /* bAlternateSetting: Alternate setting */
+    // 0x01,   /* bNumEndpoints: Two endpoints used */
+    // 0x00,   /* bInterfaceClass: vendor */
+    // 0x00,   /* bInterfaceSubClass: */
+    // 0x00,   /* bInterfaceProtocol: */
+    // 0x00,   /* iInterface: */
 
     /*Endpoint OUT Descriptor*/
     0x07,                               /* bLength: Endpoint Descriptor size */
     0x05,                               /* bDescriptorType: Endpoint */
     0x02,                               /* bEndpointAddress */
     0x02,                               /* bmAttributes: Control 0x0 Isochronous 0x1 Bulk 0x2 Interrupt 0x3*/
-    0x40,                               /* wMaxPacketSize: */
-    0x00,
+    0x00,                               /* wMaxPacketSize: */
+    0x02,
     0x00,                                /* bInterval: ignore for Bulk transfer */
 
     ///////////////////////////////////////
@@ -138,12 +138,11 @@ uint8_t video_descriptor[] = {
     '0', 0x00,                  /* wcChar7 */
     '0', 0x00,                  /* wcChar8 */
     '0', 0x00,                  /* wcChar9 */
-#ifdef CONFIG_USB_HS
     ///////////////////////////////////////
     /// device qualifier descriptor
     ///////////////////////////////////////
     0x0a,
-    USB_DESCRIPTOR_TYPE_DEVICE_QUALIFIER,
+    0x06,
     0x00,
     0x02,
     0x00,
@@ -152,7 +151,6 @@ uint8_t video_descriptor[] = {
     0x40,
     0x01,
     0x00,
-#endif
     0x00,
     // 0xa,0xa,0xa,0xa
 };
