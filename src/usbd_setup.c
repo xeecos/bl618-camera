@@ -4,7 +4,6 @@
 
 volatile bool ep_tx_busy_flag = true;
 USB_NOCACHE_RAM_SECTION USB_MEM_ALIGNX uint8_t read_buffer[2048];
-USB_NOCACHE_RAM_SECTION USB_MEM_ALIGNX uint8_t write_buffer[2048];
 USB_NOCACHE_RAM_SECTION USB_MEM_ALIGNX uint8_t frame[2048];
 void usbd_event_handler(uint8_t event)
 {
@@ -43,7 +42,7 @@ void usbd_cdc_acm_bulk_in(uint8_t ep, uint32_t nbytes)
 {
     if ((nbytes % 0x200) == 0 && nbytes) {
         /* send zlp */
-        usbd_ep_start_write(0x81, write_buffer, 0);
+        usbd_ep_start_write(0x81, frame, 0);
     } else {
         ep_tx_busy_flag = false;
     }
@@ -61,12 +60,21 @@ struct usbd_endpoint cdc_in_ep = {
 
 struct usbd_interface intf;
 extern uint16_t lineCount;
+int16_t lastCount = -1;
 void video_loop()
 {
     if(ep_tx_busy_flag==false)
     {
         ep_tx_busy_flag = true;
-        usbd_ep_start_write(0x81, write_buffer, 8);
+        if(lineCount!=lastCount)
+        {
+            lastCount = lineCount;
+            usbd_ep_start_write(0x81, frame+((lineCount&1)*640), 640);
+        }
+        else
+        {
+            usbd_ep_start_write(0x81, read_buffer, 0);
+        }
     }
     
 }

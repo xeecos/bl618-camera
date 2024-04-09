@@ -30,7 +30,8 @@ void cam_isr(int irq, void *arg)
         int offset = frameIdx*640;
         for(int i=0;i<640;i++)
         {
-            frame[offset+i] = (i>>5)<<2;
+            int val = bflb_gpio_pin0_31_read(gpio);
+            frame[offset+i] = ((val>>PIN_D0)&0x1)+(((val>>PIN_D1)&0x1)<<1)+(((val>>PIN_D2)&0x1)<<2)+(((val>>PIN_D3)&0x1)<<3)+(((val>>PIN_D4)&0x1)<<4)+(((val>>PIN_D5)&0x1)<<5)+(((val>>PIN_D6)&0x1)<<6)+(((val>>PIN_D7)&0x1)<<7);//(lineCount>>2)+((i>>5)<<2);
         }
         frame[offset] = lineCount>>8;
         frame[offset+1] = lineCount&0xff;
@@ -114,6 +115,14 @@ void cam_init()
     gpio = bflb_device_get_by_name("gpio");
     
     bflb_gpio_init(gpio, GPIO_PIN_29, GPIO_OUTPUT | GPIO_PULLUP | GPIO_SMT_EN | GPIO_DRV_0);
+    bflb_gpio_init(gpio, PIN_D0, GPIO_INPUT | GPIO_PULLUP | GPIO_SMT_EN | GPIO_DRV_0);
+    bflb_gpio_init(gpio, PIN_D1, GPIO_INPUT | GPIO_PULLUP | GPIO_SMT_EN | GPIO_DRV_0);
+    bflb_gpio_init(gpio, PIN_D2, GPIO_INPUT | GPIO_PULLUP | GPIO_SMT_EN | GPIO_DRV_0);
+    bflb_gpio_init(gpio, PIN_D3, GPIO_INPUT | GPIO_PULLUP | GPIO_SMT_EN | GPIO_DRV_0);
+    bflb_gpio_init(gpio, PIN_D4, GPIO_INPUT | GPIO_PULLUP | GPIO_SMT_EN | GPIO_DRV_0);
+    bflb_gpio_init(gpio, PIN_D5, GPIO_INPUT | GPIO_PULLUP | GPIO_SMT_EN | GPIO_DRV_0);
+    bflb_gpio_init(gpio, PIN_D6, GPIO_INPUT | GPIO_PULLUP | GPIO_SMT_EN | GPIO_DRV_0);
+    bflb_gpio_init(gpio, PIN_D7, GPIO_INPUT | GPIO_PULLUP | GPIO_SMT_EN | GPIO_DRV_0);
     
     
     bflb_gpio_uart_init(gpio, GPIO_PIN_21, GPIO_UART_FUNC_UART0_TX);
@@ -155,10 +164,10 @@ void cam_init()
 
     bflb_gpio_init(gpio, PIN_XCLK, GPIO_FUNC_PWM0 | GPIO_ALTERNATE | GPIO_PULLDOWN | GPIO_SMT_EN | GPIO_DRV_1);
 
-    /* period = .XCLK / .clk_div / .period = 40MHz / 4 / 10 = 1000KHz */
+    /* period = .XCLK / .clk_div / .period = 80MHz / 2 / 4 = 10MHz */
     struct bflb_pwm_v2_config_s pwm_cfg = {
         .clk_source = BFLB_SYSTEM_PBCLK,
-        .clk_div = 8,
+        .clk_div = 4,
         .period = 4,
     };
 
