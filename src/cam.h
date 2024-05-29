@@ -86,8 +86,6 @@ void cam_probe()
 void cam_init()
 {
     gpio = bflb_device_get_by_name("gpio");
-    board_dvp_gpio_init();
-    cam0 = bflb_device_get_by_name("cam0");
 
     bflb_gpio_init(gpio, PIN_LED, GPIO_OUTPUT | GPIO_PULLUP | GPIO_SMT_EN | GPIO_DRV_0);
 
@@ -95,7 +93,16 @@ void cam_init()
     i2c_init(gpio, PIN_SCL0, PIN_SDA0);
 
     cam_probe();
-    
+    int led = 0;
+    while(1)
+    {
+        if(led)bflb_gpio_set(gpio, PIN_LED);
+        else bflb_gpio_reset(gpio, PIN_LED);
+        led = 1-led;
+        bflb_mtimer_delay_ms(100);
+    }
+    board_dvp_gpio_init();
+    cam0 = bflb_device_get_by_name("cam0");
     struct bflb_cam_config_s cam_config;
     struct image_sensor_config_s *sensor_config;
 
