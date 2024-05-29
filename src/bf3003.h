@@ -1,5 +1,6 @@
 #pragma once
 
+#include "image_sensor.h"
 
 #define BF3003_ADDR                 0x6E
 #define BF3003_PID                  0xFC
@@ -60,19 +61,6 @@
 #define BF3003_INT_TIM_MAX_HI       0X8E
 #define BF3003_INT_TIM_MAX_LO       0X8F
 #define BF3003_LINE_CTR             0xF5 
-
-
-/**
- * @brief Image sensor command structure
- *
- * @param address  Address of command
- * @param paramete Paramete of command
- */
-struct image_sensor_command_s
-{
-    uint16_t address;
-    uint8_t paramete;
-};
 
 static struct image_sensor_command_s bf3003_init_list[] = {
     {BF3003_COM7, 0b10000000},
@@ -316,17 +304,19 @@ static struct image_sensor_command_s bf3003_init_list[] = {
 	{BF3003_GLB_GAIN, 0x10},
 };
 
-#define PIN_HREF    GPIO_PIN_1
-#define PIN_VSYNC   GPIO_PIN_0
-#define PIN_PCLK    GPIO_PIN_13
-#define PIN_XCLK    GPIO_PIN_20
-#define PIN_D0      GPIO_PIN_3
-#define PIN_D1      GPIO_PIN_10
-#define PIN_D2      GPIO_PIN_11
-#define PIN_D3      GPIO_PIN_12
-#define PIN_D4      GPIO_PIN_14
-#define PIN_D5      GPIO_PIN_15
-#define PIN_D6      GPIO_PIN_16
-#define PIN_D7      GPIO_PIN_17
-#define PIN_SDATA	GPIO_PIN_27
-#define PIN_SCLK	GPIO_PIN_28
+
+static struct image_sensor_config_s bf3003_config = {
+    .name = "BF3003",
+    .output_format = IMAGE_SENSOR_FORMAT_BAYER_BGRG,
+    .slave_addr = BF3003_ADDR,
+    .id_size = 2,
+    .reg_size = 1,
+    .h_blank = 0x90,
+    .resolution_x = 640,
+    .resolution_y = 480,
+    .id_addr = BF3003_PID,
+    .id_value = 0x30,
+    .pixel_clock = 24000000,
+    .init_list_len = sizeof(bf3003_init_list)/sizeof(bf3003_init_list[0]),
+    .init_list = bf3003_init_list,
+};

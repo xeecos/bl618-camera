@@ -1,51 +1,25 @@
 #pragma once
-#include "usb_config.h"
-#include "usb_util.h"
 #include "bflb_gpio.h"
-#include "bflb_i2c.h"
-#include "bflb_uart.h"
-#include "bflb_pwm_v2.h"
+#include "bflb_cam.h"
 #include "bflb_clock.h"
 #include "bf3003.h"
-
+#include "config.h"
+#include "sensor.h"
+#include "uart.h"
+#include "i2c.h"
 struct bflb_device_s *gpio;
-struct bflb_device_s *pwm;
-struct bflb_device_s *i2c0;
-struct bflb_device_s *uartx;
+struct bflb_device_s *cam0;
 
-extern USB_NOCACHE_RAM_SECTION USB_MEM_ALIGNX uint8_t frame[2048];
-uint16_t lineCount = 0;
-int led = 0;
+#define CAM_FRAME_COUNT_USE 50
+static volatile uint32_t cam_int_cnt = 0, pic_size;
+static uint8_t *pic;
 void cam_isr(int irq, void *arg)
 {
-    // if (bflb_gpio_get_intstatus(gpio, PIN_PCLK)) 
-    // {
-    //     bflb_gpio_int_clear(gpio, PIN_PCLK);
-    //     pixelCount++;
-    // }
-    if (bflb_gpio_get_intstatus(gpio, PIN_HREF)) 
-    {
-        bflb_gpio_int_clear(gpio, PIN_HREF);
-        int frameIdx = lineCount&1;
-        int offset = frameIdx*640;
-        for(int i=0;i<640;i++)
-        {
-            int val = bflb_gpio_pin0_31_read(gpio);
-            frame[offset+i] = ((val>>PIN_D0)&0x1)+(((val>>PIN_D1)&0x1)<<1)+(((val>>PIN_D2)&0x1)<<2)+(((val>>PIN_D3)&0x1)<<3)+(((val>>PIN_D4)&0x1)<<4)+(((val>>PIN_D5)&0x1)<<5)+(((val>>PIN_D6)&0x1)<<6)+(((val>>PIN_D7)&0x1)<<7);//(lineCount>>2)+((i>>5)<<2);
-        }
-        frame[offset] = lineCount>>8;
-        frame[offset+1] = lineCount&0xff;
-		lineCount++;
-    }
-    if (bflb_gpio_get_intstatus(gpio, PIN_VSYNC)) 
-    {
-        bflb_gpio_int_clear(gpio, PIN_VSYNC);
-		// printf("frame:%d\n",pixelCount);
-        if(led)bflb_gpio_set(gpio, GPIO_PIN_29);
-        else bflb_gpio_reset(gpio, GPIO_PIN_29);
-        led = 1-led;
-		lineCount = 0;
-    }
+    bflb_cam_int_clear(cam0, CAM_INTCLR_NORMAL);
+    cam_int_cnt++;
+    pic_size = bflb_cam_get_frame_info(cam0, &pic);
+    bflb_cam_pop_one_frame(cam0);
+    printf("CAM interrupt, pop picture %d: 0x%08x, len: %d\r\n", cam_int_cnt, (uint32_t)pic, pic_size);
 }
 uint8_t cam_sensor_read(uint8_t address)
 {
@@ -66,7 +40,7 @@ uint8_t cam_sensor_read(uint8_t address)
     buffer[0] = address & 0xff;
     msgs[0].buffer = buffer;
     msgs[1].buffer = readOut;
-    bflb_i2c_transfer(i2c0, msgs, 2);
+    i2c_transfer(msgs, 2);
     return readOut[0];
 }
 
@@ -90,7 +64,7 @@ void cam_sensor_write(uint8_t address, uint8_t paramete)
     msgs[0].buffer = buffer;
     msgs[1].buffer = writeIn;
 
-    bflb_i2c_transfer(i2c0, msgs, 2);
+    i2c_transfer(msgs, 2);
 }
 void cam_probe()
 {
@@ -111,68 +85,71 @@ void cam_probe()
 }
 void cam_init()
 {
-    pwm = bflb_device_get_by_name("pwm_v2_0");
     gpio = bflb_device_get_by_name("gpio");
-    
-    bflb_gpio_init(gpio, GPIO_PIN_29, GPIO_OUTPUT | GPIO_PULLUP | GPIO_SMT_EN | GPIO_DRV_0);
-    bflb_gpio_init(gpio, PIN_D0, GPIO_INPUT | GPIO_PULLUP | GPIO_SMT_EN | GPIO_DRV_0);
-    bflb_gpio_init(gpio, PIN_D1, GPIO_INPUT | GPIO_PULLUP | GPIO_SMT_EN | GPIO_DRV_0);
-    bflb_gpio_init(gpio, PIN_D2, GPIO_INPUT | GPIO_PULLUP | GPIO_SMT_EN | GPIO_DRV_0);
-    bflb_gpio_init(gpio, PIN_D3, GPIO_INPUT | GPIO_PULLUP | GPIO_SMT_EN | GPIO_DRV_0);
-    bflb_gpio_init(gpio, PIN_D4, GPIO_INPUT | GPIO_PULLUP | GPIO_SMT_EN | GPIO_DRV_0);
-    bflb_gpio_init(gpio, PIN_D5, GPIO_INPUT | GPIO_PULLUP | GPIO_SMT_EN | GPIO_DRV_0);
-    bflb_gpio_init(gpio, PIN_D6, GPIO_INPUT | GPIO_PULLUP | GPIO_SMT_EN | GPIO_DRV_0);
-    bflb_gpio_init(gpio, PIN_D7, GPIO_INPUT | GPIO_PULLUP | GPIO_SMT_EN | GPIO_DRV_0);
-    
-    
-    bflb_gpio_uart_init(gpio, GPIO_PIN_21, GPIO_UART_FUNC_UART0_TX);
-    bflb_gpio_uart_init(gpio, GPIO_PIN_22, GPIO_UART_FUNC_UART0_RX);
+    board_dvp_gpio_init();
+    cam0 = bflb_device_get_by_name("cam0");
 
-    uartx = bflb_device_get_by_name("uart0");
+    bflb_gpio_init(gpio, PIN_LED, GPIO_OUTPUT | GPIO_PULLUP | GPIO_SMT_EN | GPIO_DRV_0);
 
-    struct bflb_uart_config_s cfg;
-
-    cfg.baudrate = 115200;
-    cfg.data_bits = UART_DATA_BITS_8;
-    cfg.stop_bits = UART_STOP_BITS_1;
-    cfg.parity = UART_PARITY_NONE;
-    cfg.flow_ctrl = 0;
-    cfg.tx_fifo_threshold = 7;
-    cfg.rx_fifo_threshold = 7;
-    cfg.bit_order = UART_LSB_FIRST;
-    bflb_uart_init(uartx, &cfg);
-
-    bflb_gpio_init(gpio, PIN_SCLK, (GPIO_FUNC_I2C0| (1 << 8) | (1 << (9)) | (1 << (11)) | (1 << (12))));
-    bflb_gpio_init(gpio, PIN_SDATA, (GPIO_FUNC_I2C0| (1 << 8) | (1 << (9)) | (1 << (11)) | (1 << (12))));
-
-    i2c0 = bflb_device_get_by_name("i2c0");
-    bflb_i2c_init(i2c0, 100000);
+    uart_init(gpio, PIN_TX0, PIN_RX0);
+    i2c_init(gpio, PIN_SCL0, PIN_SDA0);
 
     cam_probe();
     
-    bflb_gpio_int_init(gpio, PIN_VSYNC, GPIO_INT_TRIG_MODE_SYNC_RISING_EDGE);
-    bflb_gpio_int_mask(gpio, PIN_VSYNC, false);
+    struct bflb_cam_config_s cam_config;
+    struct image_sensor_config_s *sensor_config;
 
-    bflb_gpio_int_init(gpio, PIN_HREF, GPIO_INT_TRIG_MODE_SYNC_RISING_EDGE);
-    bflb_gpio_int_mask(gpio, PIN_HREF, false);
+    if (sensor_scan(i2c0, &sensor_config)) {
+        printf("\r\nSensor name: %s\r\n", sensor_config->name);
+    } else {
+        printf("\r\nError! Can't identify sensor!\r\n");
+        while (1) {
+        }
+    }
 
-    // bflb_gpio_int_init(gpio, PIN_PCLK, GPIO_INT_TRIG_MODE_SYNC_RISING_EDGE);
-    // bflb_gpio_int_mask(gpio, PIN_PCLK, false);
+    bflb_cam_int_mask(cam0, CAM_INTMASK_NORMAL, false);
+    bflb_irq_attach(cam0->irq_num, cam_isr, NULL);
+    bflb_irq_enable(cam0->irq_num);
 
-    bflb_irq_attach(gpio->irq_num, cam_isr, gpio);
-    bflb_irq_enable(gpio->irq_num);
+    memcpy(&cam_config, sensor_config, IMAGE_SENSOR_INFO_COPY_SIZE);
+    cam_config.with_mjpeg = false;
+    cam_config.input_source = CAM_INPUT_SOURCE_DVP;
+    cam_config.output_format = CAM_OUTPUT_FORMAT_AUTO;
+    cam_config.output_bufaddr = BFLB_PSRAM_BASE;
+    cam_config.output_bufsize = cam_config.resolution_x * cam_config.resolution_y * 12;
 
-    bflb_gpio_init(gpio, PIN_XCLK, GPIO_FUNC_PWM0 | GPIO_ALTERNATE | GPIO_PULLDOWN | GPIO_SMT_EN | GPIO_DRV_1);
+    bflb_cam_init(cam0, &cam_config);
+    bflb_cam_start(cam0);
+    // pwm = bflb_device_get_by_name("pwm_v2_0");
+    // bflb_gpio_init(gpio, PIN_CAM_D0, GPIO_INPUT | GPIO_PULLUP | GPIO_SMT_EN | GPIO_DRV_0);
+    // bflb_gpio_init(gpio, PIN_CAM_D1, GPIO_INPUT | GPIO_PULLUP | GPIO_SMT_EN | GPIO_DRV_0);
+    // bflb_gpio_init(gpio, PIN_CAM_D2, GPIO_INPUT | GPIO_PULLUP | GPIO_SMT_EN | GPIO_DRV_0);
+    // bflb_gpio_init(gpio, PIN_CAM_D3, GPIO_INPUT | GPIO_PULLUP | GPIO_SMT_EN | GPIO_DRV_0);
+    // bflb_gpio_init(gpio, PIN_CAM_D4, GPIO_INPUT | GPIO_PULLUP | GPIO_SMT_EN | GPIO_DRV_0);
+    // bflb_gpio_init(gpio, PIN_CAM_D5, GPIO_INPUT | GPIO_PULLUP | GPIO_SMT_EN | GPIO_DRV_0);
+    // bflb_gpio_init(gpio, PIN_CAM_D6, GPIO_INPUT | GPIO_PULLUP | GPIO_SMT_EN | GPIO_DRV_0);
+    // bflb_gpio_init(gpio, PIN_CAM_D7, GPIO_INPUT | GPIO_PULLUP | GPIO_SMT_EN | GPIO_DRV_0);
+    // bflb_gpio_int_init(gpio, PIN_CAM_VSYNC, GPIO_INT_TRIG_MODE_SYNC_RISING_EDGE);
+    // bflb_gpio_int_mask(gpio, PIN_CAM_VSYNC, false);
 
-    /* period = .XCLK / .clk_div / .period = 80MHz / 2 / 4 = 10MHz */
-    struct bflb_pwm_v2_config_s pwm_cfg = {
-        .clk_source = BFLB_SYSTEM_PBCLK,
-        .clk_div = 4,
-        .period = 4,
-    };
+    // bflb_gpio_int_init(gpio, PIN_CAM_HREF, GPIO_INT_TRIG_MODE_SYNC_RISING_EDGE);
+    // bflb_gpio_int_mask(gpio, PIN_CAM_HREF, false);
 
-    bflb_pwm_v2_init(pwm, &pwm_cfg);
-    bflb_pwm_v2_channel_set_threshold(pwm, PWM_CH0, 1, 3); 
-    bflb_pwm_v2_channel_positive_start(pwm, PWM_CH0);
-    bflb_pwm_v2_start(pwm);
+    // bflb_gpio_int_init(gpio, PIN_CAM_PIXCLK, GPIO_INT_TRIG_MODE_SYNC_RISING_EDGE);
+    // bflb_gpio_int_mask(gpio, PIN_CAM_PIXCLK, false);
+
+
+    // bflb_gpio_init(gpio, PIN_CAM_XCLK, GPIO_FUNC_PWM0 | GPIO_ALTERNATE | GPIO_PULLDOWN | GPIO_SMT_EN | GPIO_DRV_1);
+
+    // /* period = .XCLK / .clk_div / .period = 80MHz / 2 / 4 = 10MHz */
+    // struct bflb_pwm_v2_config_s pwm_cfg = {
+    //     .clk_source = BFLB_SYSTEM_PBCLK,
+    //     .clk_div = 4,
+    //     .period = 4,
+    // };
+
+    // bflb_pwm_v2_init(pwm, &pwm_cfg);
+    // bflb_pwm_v2_channel_set_threshold(pwm, PWM_CH0, 1, 3); 
+    // bflb_pwm_v2_channel_positive_start(pwm, PWM_CH0);
+    // bflb_pwm_v2_start(pwm);
 }

@@ -99,8 +99,8 @@ struct image_sensor_config_s
     struct image_sensor_command_s *init_list;
 };
 
-void image_sensor_read(struct bflb_device_s *i2c, uint32_t sensor_index, struct image_sensor_command_s *read_list, uint32_t list_len);
-void image_sensor_write(struct bflb_device_s *i2c, uint32_t sensor_index, struct image_sensor_command_s *read_list, uint32_t list_len);
-uint32_t image_sensor_scan(struct bflb_device_s *i2c, struct image_sensor_config_s **config);
+void sensor_read(struct bflb_device_s *i2c, uint32_t sensor_index, struct image_sensor_command_s *read_list, uint32_t list_len);
+void sensor_write(struct bflb_device_s *i2c, uint32_t sensor_index, struct image_sensor_command_s *read_list, uint32_t list_len);
+uint32_t sensor_scan(struct bflb_device_s *i2c, struct image_sensor_config_s **config);
 
 #endif /* __IMAGE_SENSOR_H__ */

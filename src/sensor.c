@@ -20,7 +20,7 @@
  * under the License.
  *
  */
-#include "image_sensor.h"
+#include "sensor.h"
 #include "bf3003.h"
 #include "bflb_i2c.h"
 
@@ -28,7 +28,7 @@ static struct image_sensor_config_s *sensor_list[] = {
     NULL, &bf3003_config
 };
 
-void image_sensor_read(struct bflb_device_s *i2c, uint32_t sensor_index, struct image_sensor_command_s *read_list, uint32_t list_len)
+void sensor_read(struct bflb_device_s *i2c, uint32_t sensor_index, struct image_sensor_command_s *read_list, uint32_t list_len)
 {
     uint32_t i;
     struct bflb_i2c_msg_s msgs[2];
@@ -58,7 +58,7 @@ void image_sensor_read(struct bflb_device_s *i2c, uint32_t sensor_index, struct 
     }
 }
 
-void image_sensor_write(struct bflb_device_s *i2c, uint32_t sensor_index, struct image_sensor_command_s *read_list, uint32_t list_len)
+void sensor_write(struct bflb_device_s *i2c, uint32_t sensor_index, struct image_sensor_command_s *read_list, uint32_t list_len)
 {
     uint32_t i;
     struct bflb_i2c_msg_s msgs[2];
@@ -88,7 +88,7 @@ void image_sensor_write(struct bflb_device_s *i2c, uint32_t sensor_index, struct
     }
 }
 
-uint32_t image_sensor_scan(struct bflb_device_s *i2c, struct image_sensor_config_s **config)
+uint32_t sensor_scan(struct bflb_device_s *i2c, struct image_sensor_config_s **config)
 {
     uint32_t i, j;
     uint32_t sensor_match_flag = 0;
@@ -103,7 +103,7 @@ uint32_t image_sensor_scan(struct bflb_device_s *i2c, struct image_sensor_config
             }else{
                 read_id.address = sensor_list[i]->id_addr>>(16*j)&0xffff;
             }
-            image_sensor_read(i2c, i, &read_id, 1);
+            sensor_read(i2c, i, &read_id, 1);
             if(read_id.paramete != (sensor_list[i]->id_value>>(8*j)&0xff)){
                 sensor_match_flag = 0;
                 break;
@@ -113,7 +113,7 @@ uint32_t image_sensor_scan(struct bflb_device_s *i2c, struct image_sensor_config
         
         if(sensor_match_flag == 1){
             *config = sensor_list[i];
-            image_sensor_write(i2c, i, sensor_list[i]->init_list, sensor_list[i]->init_list_len);
+            sensor_write(i2c, i, sensor_list[i]->init_list, sensor_list[i]->init_list_len);
             return(i);
         }
     }
