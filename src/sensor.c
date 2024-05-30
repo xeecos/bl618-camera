@@ -94,8 +94,6 @@ uint32_t sensor_scan(struct bflb_device_s *i2c, struct image_sensor_config_s **c
     uint32_t sensor_match_flag = 0;
     struct image_sensor_command_s read_id = {0, 0};
     
-    bflb_i2c_init(i2c, 100000);
-    
     for(i=1;i<sizeof(sensor_list)/sizeof(sensor_list[0]);i++){
         for(j=0;j<sensor_list[i]->id_size;j++){
             if(sensor_list[i]->reg_size == 1){
