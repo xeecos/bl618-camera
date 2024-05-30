@@ -1,11 +1,11 @@
-# bl616-camera
+# bl618-camera
 
 
 ## Support CHIP
 
 |      CHIP        | Remark |
 |:----------------:|:------:|
-|BL616             |        |
+|BL618             |        |
 
 
 ## Compile
@@ -19,3 +19,21 @@
 ```
 ./flash.sh /dev/cu.usbserialxxxx
 ```
+
+cam init
+http server
+    video 
+        stream
+        record
+    image 
+        capture
+        preview
+    cam setup
+    sd 
+        list
+        read
+        delete 
+        write
+usb 
+    msc
+    uvc
