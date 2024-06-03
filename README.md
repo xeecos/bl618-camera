@@ -5,8 +5,12 @@
 
 |      CHIP        | Remark |
 |:----------------:|:------:|
-|BL618             |        |
+|BL618             |   ✓    |
+|BL616             |   ✗    |
 
+## Environment Setup
+
+For the details, you can visit [BouffaloSDK Environment](https://bl-mcu-sdk.readthedocs.io/zh-cn/latest/get_started/get_started.html) Setup.
 
 ## Compile
 
