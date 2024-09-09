@@ -2,6 +2,7 @@ if [ $1 ]
 then
 cd ./project
 uNames=`uname -s`
+make
 osName=${uNames: 0: 4}
 if [ "$osName" == "MING" ] # Darwin
 then
