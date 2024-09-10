@@ -64,7 +64,7 @@
 
 static struct image_sensor_command_s bf3003_init_list[] = {
     {BF3003_COM7, 0b10000000},
-	{BF3003_COM2, 0b11001111},
+	{BF3003_COM2, 0b00000001},
 	/*
 	Common control 2
 	Bit[7:6]: vclk output drive capability
@@ -133,7 +133,7 @@ static struct image_sensor_command_s bf3003_init_list[] = {
 			10: RGB565/RGB555/RGB444(use with 0x3a) 
 			11: Process RAW (use with 0x0c[7]) 
  	*/
-	{BF3003_TSLB, 0b00000001},
+	{BF3003_TSLB, 0b00000000},
 	/*
 		if YUV422 is selected,the Sequence is:
 		Bit[1:0]:Output YUV422 Sequence
@@ -148,7 +148,7 @@ static struct image_sensor_command_s bf3003_init_list[] = {
 		06h: G3HR5,B5G3L 07h: G3LR5,B5G3H
 		08h: G6B2H,B3LR5 09h: G6R2H,R3LB5
 	*/
-	{BF3003_COM8, 0b00010110},
+	{BF3003_COM8, 0b00010111},
 	/*
 		Auto mode Contrl
 		Bit[7:6] reserved
@@ -188,7 +188,7 @@ static struct image_sensor_command_s bf3003_init_list[] = {
 		1:disable
 	PLLCTL[6:0]: Reserved
 	*/
-	{BF3003_HREF_CNTL,0b111},
+	{BF3003_HREF_CNTL,0b000},
 	/*
 	HREF_CNTL[2:0]: 000:delay third,delay two pclk;
 		001:delay fourth,delay three pclk;

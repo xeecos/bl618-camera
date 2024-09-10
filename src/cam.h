@@ -1,37 +1,73 @@
 #pragma once
 #include "bflb_gpio.h"
-#include "bflb_pwm_v2.h"
 #include "bflb_cam.h"
 #include "bflb_clock.h"
 #include "bflb_uart.h"
+#include "bflb_mjpeg.h"
 #include "bf3003.h"
 #include "config.h"
 #include "sensor.h"
 #include "uart.h"
 #include "i2c.h"
+#include "jpeg_head.h"
 
+#define BLOCK_NUM               2
+#define ROW_NUM                 (8 * BLOCK_NUM)
+#define CAM_FRAME_COUNT_USE     5
+#define SIZE_BUFFER             (4 * 1024 * 1024)
 
-// #include "bflb_mtimer.h"
-// #include "board.h"
+static struct bflb_device_s *uart0;
+static struct bflb_device_s *gpio;
+static struct bflb_device_s *cam0;
+static struct bflb_device_s *mjpeg;
 
-struct bflb_device_s *uartx;
-struct bflb_device_s *pwm;
+volatile uint32_t pic_count = 0;
+volatile uint32_t pic_addr[CAM_FRAME_COUNT_USE] = { 0 };
+volatile uint32_t pic_len[CAM_FRAME_COUNT_USE] = { 0 };
+volatile int led = 0;
 
-struct bflb_device_s *gpio;
-struct bflb_device_s *cam0;
+uint8_t jpg_head_buf[800] = { 0 };
+uint32_t jpg_head_len;
+
+uint8_t MJPEG_QUALITY = 50;
 
 // int led = 1;
+// volatile int cam_int_cnt = 0;
+// static uint8_t *pic;
 void cam_isr(int irq, void *arg)
 {
     // bflb_cam_int_clear(cam0, CAM_INTCLR_NORMAL);
     // cam_int_cnt++;
-    // pic_size = bflb_cam_get_frame_info(cam0, &pic);
-    // bflb_cam_pop_one_frame(cam0);
-    // printf("CAM interrupt, pop picture %d: 0x%08x, len: %d\r\n", cam_int_cnt, (uint32_t)pic, pic_size);
+    // while(bflb_cam_get_frame_count(cam0)==0){}
+    // // printf("CAM interrupt, pop picture %d len: %d\r\n", cam_int_cnt,  pic_size);
+    bflb_cam_int_clear(cam0, CAM_INTCLR_NORMAL);
+}
+void mjpeg_isr(int irq, void *arg)
+{
+    uint8_t *pic;
+    uint32_t jpeg_len;
+    uint32_t intstatus = bflb_mjpeg_get_intstatus(mjpeg);
+    if (intstatus & MJPEG_INTSTS_ONE_FRAME) {
+        bflb_mjpeg_int_clear(mjpeg, MJPEG_INTCLR_ONE_FRAME); 
+        bflb_mjpeg_int_clear(mjpeg, 1 << 10);
+        jpeg_len = bflb_mjpeg_get_frame_info(mjpeg, &pic);
+        // pic_addr[pic_count] = (uint32_t)pic;
+        // pic_len[pic_count] = jpeg_len;
+        // pic_count++;
+        printf("len:%d\n", jpeg_len);
+        bflb_mjpeg_pop_one_frame(mjpeg);
+
+        if (led)
+            bflb_gpio_set(gpio, PIN_LED);
+        else bflb_gpio_reset(gpio, PIN_LED);
+        led = 1-led;
+        // if (pic_count == CAM_FRAME_COUNT_USE) {
+        //     pic_count = 0;
+            // bflb_cam_stop(cam0);
+            // bflb_mjpeg_stop(mjpeg);
+        // }
+    }
     
-        // if(led)bflb_gpio_set(gpio, PIN_LED);
-        // else bflb_gpio_reset(gpio, PIN_LED);
-        // led = 1-led;
 }
 uint8_t cam_sensor_read(uint8_t address)
 {
@@ -90,18 +126,32 @@ void cam_probe()
 		printf("ver:%x\n",ver);
         bflb_mtimer_delay_ms(1000);
     }
-    for(int i=0;i<sizeof(bf3003_init_list)/sizeof(bf3003_init_list[0]);i++){
+    for(int i=0; i<sizeof(bf3003_init_list)/sizeof(bf3003_init_list[0]); i++)
+    {
         cam_sensor_write(bf3003_init_list[i].address, bf3003_init_list[i].paramete);
-        bflb_mtimer_delay_ms(1);
+        if (i % 2 == 0)
+        {
+            bflb_gpio_set(gpio, PIN_LED);
+        }
+        else
+        {
+            bflb_gpio_reset(gpio, PIN_LED);
+        }
+        bflb_mtimer_delay_ms(40);
     }
 }
-void printf_uart(char *msg)
+void printf_uart(char *buf)
 {
     int i = 0;
-    while(msg[i])
+    while(buf[i])
     {
-        bflb_uart_putchar(uartx, msg[i]);
+
+        bflb_uart_putchar(uart0, buf[i]);
         i++;
+        if(i>100||buf[i]==0)
+        {
+            break;
+        }
     }
 }
 void cam_init()
@@ -109,11 +159,11 @@ void cam_init()
     
     board_uartx_gpio_init();
 
-    uartx = bflb_device_get_by_name("uart0");
+    uart0 = bflb_device_get_by_name("uart0");
 
     struct bflb_uart_config_s cfg;
 
-    cfg.baudrate = 115200;
+    cfg.baudrate = 2000000;
     cfg.data_bits = UART_DATA_BITS_8;
     cfg.stop_bits = UART_STOP_BITS_1;
     cfg.parity = UART_PARITY_NONE;
@@ -121,7 +171,7 @@ void cam_init()
     cfg.tx_fifo_threshold = 7;
     cfg.rx_fifo_threshold = 7;
     cfg.bit_order = UART_LSB_FIRST;
-    bflb_uart_init(uartx, &cfg);
+    bflb_uart_init(uart0, &cfg);
 
     gpio = bflb_device_get_by_name("gpio");
 
@@ -147,46 +197,106 @@ void cam_init()
 
     cam0 = bflb_device_get_by_name("cam0");
     struct bflb_cam_config_s cam_config;
-    struct image_sensor_config_s *sensor_config = &bf3003_config;
+    // struct image_sensor_config_s *sensor_config = &bf3003_config;
 
 
-    // bflb_cam_int_mask(cam0, CAM_INTMASK_NORMAL, false);
-    // bflb_irq_attach(cam0->irq_num, cam_isr, NULL);
-    // bflb_irq_enable(cam0->irq_num);
+    bflb_cam_int_mask(cam0, CAM_INTMASK_NORMAL, false);
+    bflb_irq_attach(cam0->irq_num, cam_isr, NULL);
+    bflb_irq_enable(cam0->irq_num);
 
     // memcpy(&cam_config, sensor_config, IMAGE_SENSOR_INFO_COPY_SIZE);
     cam_config.input_format = CAM_INPUT_FORMAT_YUV422_YUYV;
-    cam_config.with_mjpeg = false;
+    cam_config.with_mjpeg = true;
     cam_config.resolution_x = 640;
     cam_config.resolution_y = 480;
-    cam_config.h_blank = 0x90;
+    cam_config.h_blank = 0x80;
     cam_config.pixel_clock = 24000000;
     cam_config.input_source = CAM_INPUT_SOURCE_DVP;
     cam_config.output_format = CAM_OUTPUT_FORMAT_AUTO;
     cam_config.output_bufaddr = BFLB_PSRAM_BASE;
-    cam_config.output_bufsize = cam_config.resolution_x * cam_config.resolution_y * 12;
+    cam_config.output_bufsize = cam_config.resolution_x * ROW_NUM * 2 ;
+    //ROW_NUM;
 
     bflb_cam_init(cam0, &cam_config);
-    bflb_cam_start(cam0);
-    
-    // pwm = bflb_device_get_by_name("pwm_v2_0");
+    bflb_cam_feature_control(cam0, CAM_CMD_COUNT_TRIGGER_NORMAL_INT, 1);
+    mjpeg = bflb_device_get_by_name("mjpeg");
 
-    int led = 0;
-    static uint32_t cam_int_cnt = 0, pic_size;
-    static uint8_t *pic;
-    int status = 0;
+    struct bflb_mjpeg_config_s config;
+
+    config.format = MJPEG_FORMAT_YUV422_YUYV;
+    config.quality = MJPEG_QUALITY;
+    config.rows = ROW_NUM;
+    config.resolution_x = cam_config.resolution_x;
+    config.resolution_y = cam_config.resolution_y;
+    config.input_bufaddr0 = BFLB_PSRAM_BASE;
+    config.input_bufaddr1 = 0;
+    config.output_bufaddr = (uint32_t)BFLB_PSRAM_BASE + cam_config.resolution_x * 2 * ROW_NUM;
+    config.output_bufsize = SIZE_BUFFER - cam_config.resolution_x * 2 * ROW_NUM;
+    config.input_yy_table = NULL; /* use default table */
+    config.input_uv_table = NULL; /* use default table */
+
+    bflb_mjpeg_init(mjpeg, &config);
+
+    jpg_head_len = JpegHeadCreate(YUV_MODE_422, MJPEG_QUALITY, cam_config.resolution_x, cam_config.resolution_y, jpg_head_buf);
+    bflb_mjpeg_fill_jpeg_header_tail(mjpeg, jpg_head_buf, jpg_head_len);
+
+    bflb_mjpeg_tcint_mask(mjpeg, false);
+    bflb_irq_attach(mjpeg->irq_num, mjpeg_isr, NULL);
+    bflb_irq_enable(mjpeg->irq_num);
+    bflb_mjpeg_start(mjpeg);
+    bflb_cam_start(cam0);
+    // while(1)
+    // {
+    //     printf("hi\n");
+    //     bflb_mtimer_delay_ms(500);
+    // }
+    return;
     while (1)
     {
-        if(led)bflb_gpio_set(gpio, PIN_LED);
-        else bflb_gpio_reset(gpio, PIN_LED);
-        while (bflb_cam_get_frame_count(cam0) == 0) {
-            if(status)bflb_gpio_set(gpio, PIN_CAM_XCLK);
-            else bflb_gpio_reset(gpio, PIN_CAM_XCLK);
-            status = 1 - status;
+        uint8_t *pic;
+        uint32_t jpeg_len;
+        uint32_t intstatus = bflb_mjpeg_get_intstatus(mjpeg);
+        if (intstatus & MJPEG_INTSTS_ONE_FRAME) {
+            bflb_mjpeg_int_clear(mjpeg, MJPEG_INTCLR_ONE_FRAME);
+            jpeg_len = bflb_mjpeg_get_frame_info(mjpeg, &pic);
+            // pic_addr[pic_count] = (uint32_t)pic;
+            // pic_len[pic_count] = jpeg_len;
+            // pic_count++;
+            bflb_mjpeg_pop_one_frame(mjpeg);
+            
+            if (led)
+                bflb_gpio_set(gpio, PIN_LED);
+            else bflb_gpio_reset(gpio, PIN_LED);
+            led = 1-led;
+            // if (pic_count == CAM_FRAME_COUNT_USE) {
+            //     pic_count = 0;
+                // bflb_cam_stop(cam0);
+                // bflb_mjpeg_stop(mjpeg);
+            // }
         }
-        // pic_size = bflb_cam_get_frame_info(cam0, &pic);
-        bflb_cam_pop_one_frame(cam0);
-        led = 1-led;
-        // bflb_mtimer_delay_ms(100);
+        // printf("s:%d\n", intstatus);
+        // if (led)
+        //     bflb_gpio_set(gpio, PIN_LED);
+        // else bflb_gpio_reset(gpio, PIN_LED);
+        // led = 1-led;
+        // bflb_mtimer_delay_ms(50);
     }
+    // static uint8_t *pic;
+    // int led = 1;
+    // int cam_int_cnt = 0;
+    // while (1)
+    // {
+    //     cam_int_cnt++;
+    //     while(bflb_cam_get_frame_count(cam0)==0)
+    //     {
+
+    //     }
+    //     uint32_t pic_size = bflb_cam_get_frame_info(cam0, &pic);
+    //     // printf("cout: %d, len: %d\n", cam_int_cnt, pic_size);
+    //     bflb_cam_pop_one_frame(cam0);
+    //     if (led)
+    //         bflb_gpio_set(gpio, PIN_LED);
+    //     else bflb_gpio_reset(gpio, PIN_LED);
+    //     led = 1-led;
+    // }
 }

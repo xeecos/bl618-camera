@@ -11,6 +11,7 @@ target_sources(app PRIVATE
     # ../src/wifi.c
     # ../src/web/mlwip_https.c
     # ../src/cdc_acm_template.c
+    ../src/jpeg_head.c
 )
 sdk_set_main_file(../src/main.c)
 
