@@ -176,8 +176,8 @@ static struct image_sensor_command_s bf3003_init_list[] = {
 		Bit[1]: VSYNC option, 0:active low, 1:active high.
 		Bit[0]: HSYNC option, 0:active high, 1:active low.
 	*/
-	{BF3003_VHREF, 0b0100},
-	{BF3003_HSTART, 0x1},
+	{BF3003_VHREF, 0b0},
+	{BF3003_HSTART, 0x0},
 	{BF3003_HSTOP, 0xA0},
 	{BF3003_VSTART, 0x0},
 	{BF3003_VSTOP, 0x78},

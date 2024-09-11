@@ -181,7 +181,6 @@ void cam_task(void*param)
         datajpeg_len = bflb_mjpeg_get_frame_info(mjpeg, &pic);
         datajpeg_buf = pic;
         bflb_mjpeg_pop_one_frame(mjpeg);
-        bl_cam_frame_pop();
 
         if (led)
             bflb_gpio_set(gpio, PIN_LED);
