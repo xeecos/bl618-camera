@@ -8,8 +8,9 @@ sdk_add_include_directories(../src)
 
 target_sources(app PRIVATE 
     # ../src/sensor.c
-    # ../src/wifi.c
-    # ../src/web/mlwip_https.c
+    ../src/cam.c
+    ../src/wifi.c
+    ../src/web/mlwip_https.c
     # ../src/cdc_acm_template.c
     ../src/jpeg_head.c
 )

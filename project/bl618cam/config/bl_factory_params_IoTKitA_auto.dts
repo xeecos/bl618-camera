@@ -295,7 +295,7 @@
             auto_connect_enable = <0>;
         };
         ap {
-            ssid = "bl_test_005";
+            ssid = "EzCam";
             pwd = "12345678";
             ap_channel = <11>;
             auto_chan_detect = "disable";

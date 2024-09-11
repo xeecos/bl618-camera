@@ -13,6 +13,7 @@
 #include "rfparam_adapter.h"
 #include "wifi_mgmr_ext.h"
 #include "wifi_mgmr.h"
+#include "web/mlwip_https.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -24,11 +25,11 @@
 #include <semphr.h>
 #include <timers.h>
 
-#define USER_AP_NAME "AiPi_Cam"
+#define USER_AP_NAME "EzCam"
 #define USER_AP_PASSWORD "12345678"
 #define WIFI_STACK_SIZE  (1536)
 #define TASK_PRIORITY_FW (16)
-#define WIFI_HTTP_SERVER_STACK_SIZE  (1024 * 5)
+#define WIFI_HTTP_SERVER_STACK_SIZE  (1024 * 8)
 #define HTTP_SERVERTASK_PRIORITY (15)
 static TaskHandle_t wifi_fw_task;
 static wifi_conf_t conf = {
@@ -118,7 +119,7 @@ void wifi_event_handler(uint32_t code)
     }
 }
 
-static void start_ap(void)
+static int start_ap(void)
 {
     wifi_mgmr_ap_params_t config = {0};
 
@@ -133,6 +134,7 @@ static void start_ap(void)
 	if(wifi_mgmr_ap_start(&config) == 0){
 		return 0;
 	}
+    return 0;
 }
 
 void http_server_task(void *param)
@@ -155,5 +157,4 @@ void wifi_init()
     tcpip_init(NULL, NULL);
     wifi_start_firmware_task();
     create_http_server_task();
-
 }
