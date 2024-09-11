@@ -1,8 +1,8 @@
 #pragma once
 
 #define BLOCK_NUM               2
-#define ROW_NUM                 (4 * BLOCK_NUM)
-#define CAM_FRAME_COUNT_USE     5
+#define ROW_NUM                 (8 * BLOCK_NUM)
+#define CAM_FRAME_COUNT_USE     1
 #define SIZE_BUFFER             (4 * 1024 * 1024)
 
 #define DVP_ISR_NOTIFY_INDEX  (0)

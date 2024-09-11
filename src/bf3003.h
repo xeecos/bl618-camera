@@ -64,7 +64,7 @@
 
 static struct image_sensor_command_s bf3003_init_list[] = {
     {BF3003_COM7, 0b10000000},
-	{BF3003_COM2, 0b00000001},
+	{BF3003_COM2, 0b11001111},
 	/*
 	Common control 2
 	Bit[7:6]: vclk output drive capability
@@ -188,7 +188,7 @@ static struct image_sensor_command_s bf3003_init_list[] = {
 		1:disable
 	PLLCTL[6:0]: Reserved
 	*/
-	{BF3003_HREF_CNTL,0b000},
+	{BF3003_HREF_CNTL,0b111},
 	/*
 	HREF_CNTL[2:0]: 000:delay third,delay two pclk;
 		001:delay fourth,delay three pclk;
@@ -311,7 +311,7 @@ static struct image_sensor_config_s bf3003_config = {
     .slave_addr = BF3003_ADDR,
     .id_size = 1,
     .reg_size = 1,
-    .h_blank = 0x90,
+    .h_blank = 0x40,
     .resolution_x = 640,
     .resolution_y = 480,
     .id_addr = BF3003_PID,
