@@ -57,8 +57,8 @@ int get_http_command(char *http_msg, char *command)
     return len;
 }
 
-// #include "static_mjpeg.h"
-// extern uint8_t color_bar_test_jpg[];
+
+
 void mhttp_server_init()
 {
     // 常用变量
@@ -73,9 +73,9 @@ void mhttp_server_init()
     // int addrlen;
 
     // test
-    //  datajpeg_buf = color_bar_test_jpg;
-    //  datajpeg_len = sizeof(color_bar_test_jpg);
-    // 建立套接字
+    //  datajpeg_buf = jpeg_data;
+    //  datajpeg_len = sizeof(jpeg_data);
+    // // 建立套接字
     ss = socket(AF_INET, SOCK_STREAM, 0);
 
     if (ss < 0)
@@ -252,8 +252,14 @@ void http_server_thread(void *msg)
             // tls_gpio_write(WM_IO_PA_04, 1);
             streatask = 0;
             // datajpeg_len = sizeof(color_bar_test_jpg);
+            datajpeg_len = 0;
+            while(datajpeg_len == 0)
+            {
+                printf("sent:%d\n", datajpeg_len);
+                vTaskDelay(10);
+            }
             sprintf(head_buf, "HTTP/1.1 200 OK\r\nContent-Type: image/jpeg\r\nContent-Length: %d\r\nContent-Disposition: inline; filename=capture.jpg\r\nAccess-Control-Allow-Origin: *\r\nX-Timestamp: 208.923512\r\n\r\n", datajpeg_len);
-
+            printf("sent:%d\n", datajpeg_len);
             int ret = write(sc, head_buf, strlen(head_buf));
             if (ret == -1)
             {
@@ -264,7 +270,6 @@ void http_server_thread(void *msg)
             }
             ret = TcpWriteBlock(sc, datajpeg_buf, datajpeg_len, 8000);
             // len = datajpeg_len / 4;
-
             // ret = write(sc, &datajpeg_buf[0], len);
             if (ret < 0)
             {
@@ -415,14 +420,13 @@ void stream_task_process(void *msg)
             // tls_gpio_write(WM_IO_PA_04, 0);
             vTaskDelete(NULL);
         }
-        vTaskDelay(10);
 
         // printf("datalen:%d\r\n", datajpeg_len);
         // taskENTER_CRITICAL();
         ret = TcpWriteBlock(*pcb, datajpeg_buf, datajpeg_len, 5000);
-
         // taskEXIT_CRITICAL();
 
+        printf("sent len:%d\n", datajpeg_len);
         if (ret < 0)
         {
             close(*pcb);
@@ -452,5 +456,11 @@ void stream_task_process(void *msg)
         }
         xReturn = xSemaphoreGive(MuxSem_Handle); // 给出互斥量
         vTaskDelay(50);
+        datajpeg_len = 0;
+        while(datajpeg_len==0)
+        {
+            vTaskDelay(1);
+        }
+        // 
     }
 }

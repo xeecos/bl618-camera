@@ -64,7 +64,7 @@
 
 static struct image_sensor_command_s bf3003_init_list[] = {
     {BF3003_COM7, 0b10000000},
-	{BF3003_COM2, 0b11001111},
+	{BF3003_COM2, 0b00000000},
 	/*
 	Common control 2
 	Bit[7:6]: vclk output drive capability
@@ -188,7 +188,7 @@ static struct image_sensor_command_s bf3003_init_list[] = {
 		1:disable
 	PLLCTL[6:0]: Reserved
 	*/
-	{BF3003_HREF_CNTL,0b111},
+	{BF3003_HREF_CNTL,0b000},
 	/*
 	HREF_CNTL[2:0]: 000:delay third,delay two pclk;
 		001:delay fourth,delay three pclk;
@@ -200,7 +200,7 @@ static struct image_sensor_command_s bf3003_init_list[] = {
 		111:delay tenth,delay nine pclk;
 	*/
 	{BF3003_EXHCH,0x00},
-	{BF3003_EXHCL,0x80},
+	{BF3003_EXHCL,0x10},
 	/*
 	Dummy Pixel Insert MSB
 		Bit[7:4]: 4MSB for dummy pixel insert in horizontal direction
@@ -256,7 +256,7 @@ static struct image_sensor_command_s bf3003_init_list[] = {
 		0: Select {0x89[5],0x9E[7:0]} as Banding Filter Value.
 		1: Select {0x89[4],0x9D[7:0]} as Banding Filter Value
 	*/
-	{BF3003_TEST_MODE, 0b10000000},
+	{BF3003_TEST_MODE, 0b00000000},
 	/*
 	BIT[7] : 
 		1: test pattern enable
@@ -291,13 +291,13 @@ static struct image_sensor_command_s bf3003_init_list[] = {
 	Bit[1]:U、V dither enable
 	Bit[0]:RGB dither enable 
 	*/
-	{BF3003_INT_MEAN_H,  0x32},
-	{BF3003_INT_MEAN_L,  0xAA},
+	{BF3003_INT_MEAN_H,  0x00},
+	{BF3003_INT_MEAN_L,  0x00},
 	{BF3003_INT_TIM_MIN, 0x00},
 	{BF3003_INT_TIM_HI,  0x00},
 	{BF3003_INT_TIM_LO,  0x00},
 	{BF3003_INT_TIM_MAX_HI, 0xFF},
-	{BF3003_INT_TIM_MAX_LO, 0xFF},
+	{BF3003_INT_TIM_MAX_LO, 0x00},
 	{BF3003_LINE_CTR, 0x1},
 	{BF3003_GLB_GAIN_MIN, 0x00},
 	{BF3003_GLB_GAIN_MAX, 0xFF},

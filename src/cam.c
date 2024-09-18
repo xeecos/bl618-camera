@@ -37,38 +37,61 @@ static __attribute__((aligned(32))) ATTR_NOINIT_PSRAM_SECTION uint8_t dvp_buffer
 static __attribute__((aligned(32))) ATTR_NOINIT_PSRAM_SECTION uint8_t mjpeg_buffer[60 * 1024 * CAM_FRAME_COUNT_USE];
 void cam_isr(int irq, void *arg)
 {
-    // bflb_cam_int_clear(cam0, CAM_INTCLR_NORMAL);
-    // cam_int_cnt++;
-    // while(bflb_cam_get_frame_count(cam0)==0){}
-    // // printf("CAM interrupt, pop picture %d len: %d\r\n", cam_int_cnt,  pic_size);
     bflb_cam_int_clear(cam0, CAM_INTCLR_NORMAL);
+    // BaseType_t pxHigherPriorityTaskWoken = pdFALSE;
+    // vTaskNotifyGiveIndexedFromISR(cam_process_task_hd, DVP_ISR_NOTIFY_INDEX, &pxHigherPriorityTaskWoken);
+    // if (pxHigherPriorityTaskWoken) {
+    //     portYIELD_FROM_ISR(pxHigherPriorityTaskWoken);
+    // }
 }
 void mjpeg_isr(int irq, void *arg)
 {
     uint8_t *pic;
     uint32_t intstatus = bflb_mjpeg_get_intstatus(mjpeg);
-    bflb_mjpeg_stop(mjpeg);
-    bflb_cam_stop(cam0);
+    // bflb_cam_stop(cam0);
+    // bflb_mjpeg_stop(mjpeg);
+    int frame = 0;
     if (intstatus & MJPEG_INTSTS_ONE_FRAME) {
         bflb_mjpeg_int_clear(mjpeg, MJPEG_INTCLR_ONE_FRAME); 
         bflb_mjpeg_int_clear(mjpeg, 1 << 10);
-        BaseType_t pxHigherPriorityTaskWoken = pdFALSE;
-        vTaskNotifyGiveFromISR(cam_process_task_hd, &pxHigherPriorityTaskWoken);
-        if (pxHigherPriorityTaskWoken) {
-            portYIELD_FROM_ISR(pxHigherPriorityTaskWoken);
-        }
-        // if (pic_count == CAM_FRAME_COUNT_USE) {
-        //     pic_count = 0;
-            // bflb_cam_stop(cam0);
-            // bflb_mjpeg_stop(mjpeg);
+        // BaseType_t pxHigherPriorityTaskWoken = pdFALSE;
+        // vTaskNotifyGiveIndexedFromISR(cam_process_task_hd, JPEG_ISR_NOTIFY_INDEX, &pxHigherPriorityTaskWoken);
+        // if (pxHigherPriorityTaskWoken) {
+        //     portYIELD_FROM_ISR(pxHigherPriorityTaskWoken);
         // }
+        if(datajpeg_len==0)
+        {
+            int len = bflb_mjpeg_get_frame_info(mjpeg, &pic);
+            printf("jpeg len:%d\n", len);
+            memcpy(datajpeg_buf, pic, len);
+            datajpeg_len = len;
+            if (led)
+                bflb_gpio_set(gpio, PIN_LED);
+            else bflb_gpio_reset(gpio, PIN_LED);
+            led = 1-led;
+        }
+        frame = 1;
     }
     else if (intstatus & (1 << 6)) {
-        /* over size error */
-        /* clear over size isr */
         bflb_mjpeg_int_clear(mjpeg, 1 << 10);
+        // BaseType_t pxHigherPriorityTaskWoken = pdFALSE;
+        // vTaskNotifyGiveIndexedFromISR(cam_process_task_hd, JPEG_ISR_NOTIFY_INDEX, &pxHigherPriorityTaskWoken);
+        // if (pxHigherPriorityTaskWoken) {
+        //     portYIELD_FROM_ISR(pxHigherPriorityTaskWoken);
+        // }
+        frame = 1;
     }
-    
+    if(frame==1)
+    {
+        jpeg_len = 0;
+        bflb_mjpeg_pop_one_frame(mjpeg);
+
+        // bflb_mjpeg_start(mjpeg);
+        // bflb_cam_start(cam0);
+        // printf("len:%d\n", jpeg_len);
+    }
+        // ulTaskNotifyTakeIndexed(DVP_ISR_NOTIFY_INDEX, pdTRUE, portMAX_DELAY);
+        // ulTaskNotifyTakeIndexed(JPEG_ISR_NOTIFY_INDEX, pdTRUE, portMAX_DELAY);
 }
 uint8_t cam_sensor_read(uint8_t address)
 {
@@ -166,26 +189,16 @@ void print_task(void* param)
 void cam_task(void*param)
 {
     cam_probe();
-    uint8_t *pic;
+    // uint8_t *pic;
+    datajpeg_buf = (char *)malloc(1024 * 100);
+    datajpeg_len = 0;
+    bflb_mjpeg_start(mjpeg);
+    bflb_cam_start(cam0);
     while (1)
     {
-        vTaskDelay(1);
         // if(jpeg_len>0)
-        {
-            jpeg_len = 0;
-            bflb_mjpeg_start(mjpeg);
-            bflb_cam_start(cam0);
-            // printf("len:%d\n", jpeg_len);
-        }
-        ulTaskNotifyTake( pdTRUE, portMAX_DELAY);
-        datajpeg_len = bflb_mjpeg_get_frame_info(mjpeg, &pic);
-        datajpeg_buf = pic;
-        bflb_mjpeg_pop_one_frame(mjpeg);
-
-        if (led)
-            bflb_gpio_set(gpio, PIN_LED);
-        else bflb_gpio_reset(gpio, PIN_LED);
-        led = 1-led;
+        
+        vTaskDelay(5);
     }
 }
 void cam_init()

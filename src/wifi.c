@@ -13,7 +13,8 @@
 #include "rfparam_adapter.h"
 #include "wifi_mgmr_ext.h"
 #include "wifi_mgmr.h"
-#include "web/mlwip_https.h"
+// #include "web/mlwip_https.h"
+#include "server.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -140,7 +141,8 @@ static int start_ap(void)
 void http_server_task(void *param)
 {
     start_ap();
-    mhttp_server_init();
+    // mhttp_server_init();
+    server_init();
 }
 void create_http_server_task(void)
 {
