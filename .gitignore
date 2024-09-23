@@ -34,3 +34,4 @@ build
 .vscode
 .pio
 .DS_Store
+*.jpg

@@ -5,6 +5,7 @@
 #include "bflb_clock.h"
 #include "bflb_uart.h"
 #include "bflb_mjpeg.h"
+#include "bflb_pwm_v2.h"
 #include "bf3003.h"
 #include "config.h"
 #include "sensor.h"
@@ -17,6 +18,7 @@ static struct bflb_device_s *uart0;
 static struct bflb_device_s *gpio;
 static struct bflb_device_s *cam0;
 static struct bflb_device_s *mjpeg;
+volatile int status_cam = 0;
 extern char *datajpeg_buf;
 extern uint32_t datajpeg_len;
 
@@ -38,30 +40,41 @@ static __attribute__((aligned(32))) ATTR_NOINIT_PSRAM_SECTION uint8_t mjpeg_buff
 void cam_isr(int irq, void *arg)
 {
     bflb_cam_int_clear(cam0, CAM_INTCLR_NORMAL);
-    BaseType_t pxHigherPriorityTaskWoken = pdFALSE;
-    vTaskNotifyGiveIndexedFromISR(cam_process_task_hd, DVP_ISR_NOTIFY_INDEX, &pxHigherPriorityTaskWoken);
-    if (pxHigherPriorityTaskWoken) {
-        portYIELD_FROM_ISR(pxHigherPriorityTaskWoken);
-    }
+    // BaseType_t pxHigherPriorityTaskWoken = pdFALSE;
+    // vTaskNotifyGiveIndexedFromISR(cam_process_task_hd, DVP_ISR_NOTIFY_INDEX, &pxHigherPriorityTaskWoken);
+    // if (pxHigherPriorityTaskWoken) {
+    //     portYIELD_FROM_ISR(pxHigherPriorityTaskWoken);
+    // }
 }
 void mjpeg_isr(int irq, void *arg)
 {
     uint8_t *pic;
     uint32_t intstatus = bflb_mjpeg_get_intstatus(mjpeg);
-    bflb_cam_stop(cam0);
-    bflb_mjpeg_stop(mjpeg);
+    // bflb_mjpeg_stop(mjpeg);
+    // bflb_cam_stop(cam0);
     int frame = 0;
     if (intstatus & MJPEG_INTSTS_ONE_FRAME) {
         bflb_mjpeg_int_clear(mjpeg, MJPEG_INTCLR_ONE_FRAME); 
-        bflb_mjpeg_int_clear(mjpeg, 1 << 10);
+        // bflb_mjpeg_int_clear(mjpeg, 1 << 10);
         // BaseType_t pxHigherPriorityTaskWoken = pdFALSE;
         // vTaskNotifyGiveIndexedFromISR(cam_process_task_hd, JPEG_ISR_NOTIFY_INDEX, &pxHigherPriorityTaskWoken);
         // if (pxHigherPriorityTaskWoken) {
         //     portYIELD_FROM_ISR(pxHigherPriorityTaskWoken);
         // }
         // if(datajpeg_len==0)
+        
+        if(cam_status()==0)
         {
+            int len = bflb_mjpeg_get_frame_info(mjpeg, &pic);
+            memcpy(datajpeg_buf, pic, len);
+            datajpeg_len = len;
+            cam_set_status(1);
         }
+        if (led)
+            bflb_gpio_set(gpio, PIN_LED);
+        else 
+            bflb_gpio_reset(gpio, PIN_LED);
+        led = 1-led;
         frame = 1;
     }
     else if (intstatus & (1 << 6)) {
@@ -70,16 +83,12 @@ void mjpeg_isr(int irq, void *arg)
     }
     if(frame==1)
     {
-        
-        BaseType_t pxHigherPriorityTaskWoken = pdFALSE;
-        vTaskNotifyGiveFromISR(cam_process_task_hd, &pxHigherPriorityTaskWoken);
-        if (pxHigherPriorityTaskWoken) {
-            portYIELD_FROM_ISR(pxHigherPriorityTaskWoken);
-        }
-
-        // bflb_mjpeg_start(mjpeg);
-        // bflb_cam_start(cam0);
-        // printf("len:%d\n", jpeg_len);
+        bflb_mjpeg_pop_one_frame(mjpeg);
+        // BaseType_t pxHigherPriorityTaskWoken = pdFALSE;
+        // vTaskNotifyGiveFromISR(cam_process_task_hd, &pxHigherPriorityTaskWoken);
+        // if (pxHigherPriorityTaskWoken) {
+        //     portYIELD_FROM_ISR(pxHigherPriorityTaskWoken);
+        // }
     }
 }
 uint8_t cam_sensor_read(uint8_t address)
@@ -180,9 +189,26 @@ void print_task(void* param)
 {
     while(1)
     {
-        printf("len:%d\n", 100);
         vTaskDelay(1000);
     }
+}
+
+int cam_status()
+{
+    return status_cam;
+}
+void cam_set_status(int status)
+{
+    status_cam = status;
+}
+
+uint32_t cam_data_length()
+{
+    return datajpeg_len;
+}
+uint8_t *cam_data()
+{
+    return datajpeg_buf;
 }
 void cam_task(void*param)
 {
@@ -190,23 +216,12 @@ void cam_task(void*param)
     uint8_t *pic;
     datajpeg_buf = (char *)malloc(1024 * 100);
     datajpeg_len = 0;
-    bflb_mjpeg_start(mjpeg);
     bflb_cam_start(cam0);
+    bflb_mjpeg_start(mjpeg);
     while (1)
     {
-        vTaskDelay(5);
-        ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
-        int len = bflb_mjpeg_get_frame_info(mjpeg, &pic);
-        memcpy(datajpeg_buf, pic, len);
-        datajpeg_len = len;
-        bflb_mjpeg_pop_one_frame(mjpeg);
-        if (led)
-            bflb_gpio_set(gpio, PIN_LED);
-        else 
-            bflb_gpio_reset(gpio, PIN_LED);
-        led = 1-led;
-        bflb_mjpeg_start(mjpeg);
-        bflb_cam_start(cam0);
+        vTaskDelay(10);
+        // ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
     }
 }
 void cam_init()
@@ -249,6 +264,33 @@ void cam_init()
     bflb_gpio_init(gpio, PIN_CAM_HREF, GPIO_FUNC_CAM | GPIO_ALTERNATE | GPIO_PULLUP | GPIO_SMT_EN | GPIO_DRV_1);
     bflb_gpio_init(gpio, PIN_CAM_VSYNC, GPIO_FUNC_CAM | GPIO_ALTERNATE | GPIO_PULLUP | GPIO_SMT_EN | GPIO_DRV_1);
     bflb_gpio_init(gpio, PIN_CAM_PIXCLK, GPIO_FUNC_CAM | GPIO_ALTERNATE | GPIO_PULLUP | GPIO_SMT_EN | GPIO_DRV_1);
+
+    // bflb_gpio_init(gpio, PIN_CAM_XCLK, GPIO_FUNC_PWM0 | GPIO_ALTERNATE | GPIO_PULLDOWN | GPIO_SMT_EN | GPIO_DRV_1);
+    
+    /* period = .XCLK / .clk_div / .period = 40MHz / 2 / 10 = 2000KHz */
+    // struct bflb_pwm_v2_config_s cfg_pwm = {
+    //     .clk_source = BFLB_SYSTEM_XCLK,
+    //     .clk_div = 2,
+    //     .period = 10,
+    // };
+
+    // struct bflb_device_s *pwm = bflb_device_get_by_name("pwm_v2_0");
+    // bflb_pwm_v2_init(pwm, &cfg_pwm);
+    // bflb_pwm_v2_channel_set_threshold(pwm, PWM_CH0, 1, 6); 
+    // bflb_pwm_v2_channel_positive_start(pwm, PWM_CH0);
+    // bflb_pwm_v2_start(pwm);
+    
+    // while(1)
+    // {
+    //     if(bflb_gpio_read(gpio, PIN_CAM_VSYNC)==1)
+    //     {
+    //         if (led)
+    //             bflb_gpio_set(gpio, PIN_LED);
+    //         else 
+    //             bflb_gpio_reset(gpio, PIN_LED);
+    //         led = 1-led;
+    //     }
+    // }
 
     cam0 = bflb_device_get_by_name("cam0");
     struct bflb_cam_config_s cam_config;
@@ -293,21 +335,6 @@ void cam_init()
     bflb_irq_attach(mjpeg->irq_num, mjpeg_isr, NULL);
     bflb_irq_enable(mjpeg->irq_num);
 
-    // uint32_t reg_temp = getreg32(mjpeg->reg_base + 0x00);
-    // putreg32((reg_temp | (1 << 3)), (mjpeg->reg_base + 0x00)); /* enable over_size int */
-
-    // bflb_mjpeg_tcint_mask(mjpeg, false);
-    // reg_temp = getreg32(mjpeg->reg_base + 0x1C);
-    // putreg32((reg_temp | (1 << 2)), (mjpeg->reg_base + 0x1C)); /* enable over_size int */
-    // bflb_irq_attach(mjpeg->irq_num, mjpeg_isr, NULL);
-    // bflb_irq_enable(mjpeg->irq_num);
-
-    
-    // while(1)
-    // {
-    //     printf("hi\n");
-    //     bflb_mtimer_delay_ms(500);
-    // }
     
     xTaskCreate(cam_task, (char *)"cam_task", 1024, NULL, 14, &cam_process_task_hd);
     // xTaskCreate(print_task, (char *)"print_task", 1024, NULL, 14, &print_task_hd);

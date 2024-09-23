@@ -200,7 +200,7 @@ static struct image_sensor_command_s bf3003_init_list[] = {
 		111:delay tenth,delay nine pclk;
 	*/
 	{BF3003_EXHCH,0x00},
-	{BF3003_EXHCL,0x10},
+	{BF3003_EXHCL,0x40},
 	/*
 	Dummy Pixel Insert MSB
 		Bit[7:4]: 4MSB for dummy pixel insert in horizontal direction
@@ -291,13 +291,13 @@ static struct image_sensor_command_s bf3003_init_list[] = {
 	Bit[1]:U、V dither enable
 	Bit[0]:RGB dither enable 
 	*/
-	{BF3003_INT_MEAN_H,  0x00},
-	{BF3003_INT_MEAN_L,  0x00},
+	{BF3003_INT_MEAN_H,  0x32},
+	{BF3003_INT_MEAN_L,  0xAA},
 	{BF3003_INT_TIM_MIN, 0x00},
 	{BF3003_INT_TIM_HI,  0x00},
 	{BF3003_INT_TIM_LO,  0x00},
 	{BF3003_INT_TIM_MAX_HI, 0xFF},
-	{BF3003_INT_TIM_MAX_LO, 0x00},
+	{BF3003_INT_TIM_MAX_LO, 0xFF},
 	{BF3003_LINE_CTR, 0x1},
 	{BF3003_GLB_GAIN_MIN, 0x00},
 	{BF3003_GLB_GAIN_MAX, 0xFF},

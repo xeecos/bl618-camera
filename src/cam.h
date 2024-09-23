@@ -17,3 +17,7 @@ void printf_uart(char *buf);
 void print_task(void *param);
 void cam_task(void *param);
 void cam_init();
+int cam_status();
+void cam_set_status(int status);
+uint32_t cam_data_length();
+uint8_t *cam_data();

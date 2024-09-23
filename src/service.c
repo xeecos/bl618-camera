@@ -1,5 +1,4 @@
-#pragma once
-
+#include "service.h"
 #include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -11,19 +10,15 @@
 #include <lwip/errno.h>
 #include <netdb.h>
 
-#include "shell.h"
+#include "cam.h"
 #include "utils_getopt.h"
 #include "bflb_mtimer.h"
 
-extern char *datajpeg_buf;
-extern uint32_t datajpeg_len;
 uint8_t recv_buf[512] = {0};
-
-shell_sig_func_ptr abort_exec;
 uint64_t recv_len = 0;
 int sock = -1;
 
-static void server_close(int sig)
+void service_close(int sig)
 {
     if (sock) {
         closesocket(sock);
@@ -32,12 +27,7 @@ static void server_close(int sig)
         printf("Total send data=%lld\r\n", recv_len);
     }
 }
-
-#define PING_USAGE             \
-    "wifi_udp_echo [port]\r\n" \
-    "\t port: local listen port, default port 5001\r\n"
-
-static void server_init()
+void service_init()
 {
     printf("udp server task start ...\r\n");
 
@@ -68,17 +58,33 @@ static void server_init()
         recv_len = 0;
         while (1) {
             recv_len = recvfrom(sock, recv_buf, 1024, 0, (struct sockaddr *)&remote_addr, &addr_len);
-            sendto(sock, recv_buf, recv_len, 0, (struct sockaddr *)&remote_addr, addr_len);
+            // printf("recv from %s\r\n", inet_ntoa(remote_addr.sin_addr));
+            // printf("recv:%s \r\n", recv_buf);
             if(recv_len > 0)
             {
-                datajpeg_len = 0;
-                while(datajpeg_len == 0)
+                cam_set_status(0);
+                while (cam_status()== 0);
+                int len = cam_data_length();
+                char *msg_count = (char *)malloc(64);
+                sprintf(msg_count,"len:%d\n\0", len);
+                sendto(sock, msg_count, strlen(msg_count), 0, (struct sockaddr *)&remote_addr, addr_len);
+                recv_len = recvfrom(sock, recv_buf, 1024, 0, (struct sockaddr *)&remote_addr, &addr_len);
+                free(msg_count);
+                int count = (int)(len/1024)+1;
+                for (int i = 0; i < count; i++)
                 {
-                    vTaskDelay(1);
+                    sendto(sock, cam_data() + i * 1024, len < 1024 ? len : 1024, 0, (struct sockaddr *)&remote_addr, addr_len);
+                    // bflb_mtimer_delay_ms(1);
+                    len -= 1024;
+                    if(len<0)
+                    {
+                        break;
+                    }
+                    else
+                    {
+                        recv_len = recvfrom(sock, recv_buf, 1024, 0, (struct sockaddr *)&remote_addr, &addr_len);
+                    }
                 }
-                // printf("recv from %s\r\n", inet_ntoa(remote_addr.sin_addr));
-                // printf("recv:%s \r\n", recv_buf);
-                sendto(sock, datajpeg_buf, datajpeg_len, 0, (struct sockaddr *)&remote_addr, addr_len);
             }
         }
         closesocket(sock);

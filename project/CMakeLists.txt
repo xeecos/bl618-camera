@@ -10,6 +10,7 @@ target_sources(app PRIVATE
     # ../src/sensor.c
     ../src/cam.c
     ../src/wifi.c
+    ../src/service.c
     ../src/web/mlwip_https.c
     # ../src/cdc_acm_template.c
     ../src/jpeg_head.c
