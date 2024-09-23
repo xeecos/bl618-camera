@@ -38,18 +38,18 @@ static __attribute__((aligned(32))) ATTR_NOINIT_PSRAM_SECTION uint8_t mjpeg_buff
 void cam_isr(int irq, void *arg)
 {
     bflb_cam_int_clear(cam0, CAM_INTCLR_NORMAL);
-    // BaseType_t pxHigherPriorityTaskWoken = pdFALSE;
-    // vTaskNotifyGiveIndexedFromISR(cam_process_task_hd, DVP_ISR_NOTIFY_INDEX, &pxHigherPriorityTaskWoken);
-    // if (pxHigherPriorityTaskWoken) {
-    //     portYIELD_FROM_ISR(pxHigherPriorityTaskWoken);
-    // }
+    BaseType_t pxHigherPriorityTaskWoken = pdFALSE;
+    vTaskNotifyGiveIndexedFromISR(cam_process_task_hd, DVP_ISR_NOTIFY_INDEX, &pxHigherPriorityTaskWoken);
+    if (pxHigherPriorityTaskWoken) {
+        portYIELD_FROM_ISR(pxHigherPriorityTaskWoken);
+    }
 }
 void mjpeg_isr(int irq, void *arg)
 {
     uint8_t *pic;
     uint32_t intstatus = bflb_mjpeg_get_intstatus(mjpeg);
-    // bflb_cam_stop(cam0);
-    // bflb_mjpeg_stop(mjpeg);
+    bflb_cam_stop(cam0);
+    bflb_mjpeg_stop(mjpeg);
     int frame = 0;
     if (intstatus & MJPEG_INTSTS_ONE_FRAME) {
         bflb_mjpeg_int_clear(mjpeg, MJPEG_INTCLR_ONE_FRAME); 
@@ -59,39 +59,28 @@ void mjpeg_isr(int irq, void *arg)
         // if (pxHigherPriorityTaskWoken) {
         //     portYIELD_FROM_ISR(pxHigherPriorityTaskWoken);
         // }
-        if(datajpeg_len==0)
+        // if(datajpeg_len==0)
         {
-            int len = bflb_mjpeg_get_frame_info(mjpeg, &pic);
-            printf("jpeg len:%d\n", len);
-            memcpy(datajpeg_buf, pic, len);
-            datajpeg_len = len;
-            if (led)
-                bflb_gpio_set(gpio, PIN_LED);
-            else bflb_gpio_reset(gpio, PIN_LED);
-            led = 1-led;
         }
         frame = 1;
     }
     else if (intstatus & (1 << 6)) {
         bflb_mjpeg_int_clear(mjpeg, 1 << 10);
-        // BaseType_t pxHigherPriorityTaskWoken = pdFALSE;
-        // vTaskNotifyGiveIndexedFromISR(cam_process_task_hd, JPEG_ISR_NOTIFY_INDEX, &pxHigherPriorityTaskWoken);
-        // if (pxHigherPriorityTaskWoken) {
-        //     portYIELD_FROM_ISR(pxHigherPriorityTaskWoken);
-        // }
         frame = 1;
     }
     if(frame==1)
     {
-        jpeg_len = 0;
-        bflb_mjpeg_pop_one_frame(mjpeg);
+        
+        BaseType_t pxHigherPriorityTaskWoken = pdFALSE;
+        vTaskNotifyGiveFromISR(cam_process_task_hd, &pxHigherPriorityTaskWoken);
+        if (pxHigherPriorityTaskWoken) {
+            portYIELD_FROM_ISR(pxHigherPriorityTaskWoken);
+        }
 
         // bflb_mjpeg_start(mjpeg);
         // bflb_cam_start(cam0);
         // printf("len:%d\n", jpeg_len);
     }
-        // ulTaskNotifyTakeIndexed(DVP_ISR_NOTIFY_INDEX, pdTRUE, portMAX_DELAY);
-        // ulTaskNotifyTakeIndexed(JPEG_ISR_NOTIFY_INDEX, pdTRUE, portMAX_DELAY);
 }
 uint8_t cam_sensor_read(uint8_t address)
 {
@@ -140,6 +129,7 @@ void cam_sensor_write(uint8_t address, uint8_t paramete)
 }
 void cam_probe()
 {
+    int i = 0;
     while(1)
     {
 		uint8_t ver = cam_sensor_read(BF3003_PID);
@@ -148,9 +138,18 @@ void cam_probe()
             break;
         }
 		printf("ver:%x\n",ver);
-        bflb_mtimer_delay_ms(1000);
+        if (i == 0)
+        {
+            bflb_gpio_set(gpio, PIN_LED);
+        }
+        else
+        {
+            bflb_gpio_reset(gpio, PIN_LED);
+        }
+        i = 1 - i;
+        bflb_mtimer_delay_ms(200);
     }
-    for(int i=0; i<sizeof(bf3003_init_list)/sizeof(bf3003_init_list[0]); i++)
+    for (i = 0; i < sizeof(bf3003_init_list) / sizeof(bf3003_init_list[0]); i++)
     {
         cam_sensor_write(bf3003_init_list[i].address, bf3003_init_list[i].paramete);
         if (i % 2 == 0)
@@ -169,7 +168,6 @@ void printf_uart(char *buf)
     int i = 0;
     while(buf[i])
     {
-
         bflb_uart_putchar(uart0, buf[i]);
         i++;
         if(i>100||buf[i]==0)
@@ -189,16 +187,26 @@ void print_task(void* param)
 void cam_task(void*param)
 {
     cam_probe();
-    // uint8_t *pic;
+    uint8_t *pic;
     datajpeg_buf = (char *)malloc(1024 * 100);
     datajpeg_len = 0;
     bflb_mjpeg_start(mjpeg);
     bflb_cam_start(cam0);
     while (1)
     {
-        // if(jpeg_len>0)
-        
         vTaskDelay(5);
+        ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+        int len = bflb_mjpeg_get_frame_info(mjpeg, &pic);
+        memcpy(datajpeg_buf, pic, len);
+        datajpeg_len = len;
+        bflb_mjpeg_pop_one_frame(mjpeg);
+        if (led)
+            bflb_gpio_set(gpio, PIN_LED);
+        else 
+            bflb_gpio_reset(gpio, PIN_LED);
+        led = 1-led;
+        bflb_mjpeg_start(mjpeg);
+        bflb_cam_start(cam0);
     }
 }
 void cam_init()

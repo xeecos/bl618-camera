@@ -15,9 +15,9 @@
 #include "utils_getopt.h"
 #include "bflb_mtimer.h"
 
-// clang-format off
-uint32_t recv_buf[2 * 1024] = {0};
-// clang-format on
+extern char *datajpeg_buf;
+extern uint32_t datajpeg_len;
+uint8_t recv_buf[512] = {0};
 
 shell_sig_func_ptr abort_exec;
 uint64_t recv_len = 0;
@@ -68,9 +68,18 @@ static void server_init()
         recv_len = 0;
         while (1) {
             recv_len = recvfrom(sock, recv_buf, 1024, 0, (struct sockaddr *)&remote_addr, &addr_len);
-            printf("recv from %s\r\n", inet_ntoa(remote_addr.sin_addr));
-            printf("recv:%s \r\n", recv_buf);
             sendto(sock, recv_buf, recv_len, 0, (struct sockaddr *)&remote_addr, addr_len);
+            if(recv_len > 0)
+            {
+                datajpeg_len = 0;
+                while(datajpeg_len == 0)
+                {
+                    vTaskDelay(1);
+                }
+                // printf("recv from %s\r\n", inet_ntoa(remote_addr.sin_addr));
+                // printf("recv:%s \r\n", recv_buf);
+                sendto(sock, datajpeg_buf, datajpeg_len, 0, (struct sockaddr *)&remote_addr, addr_len);
+            }
         }
         closesocket(sock);
         return;
