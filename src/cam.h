@@ -13,8 +13,6 @@ uint8_t cam_sensor_read(uint8_t address);
 
 void cam_sensor_write(uint8_t address, uint8_t paramete);
 void cam_probe();
-void printf_uart(char *buf);
-void print_task(void *param);
 void cam_task(void *param);
 void cam_init();
 int cam_status();

@@ -12,7 +12,7 @@ target_sources(app PRIVATE
     ../src/wifi.c
     ../src/service.c
     ../src/web/mlwip_https.c
-    # ../src/cdc_acm_template.c
+    ../src/usb_uart.c
     ../src/jpeg_head.c
 )
 sdk_set_main_file(../src/main.c)

@@ -1,24 +1,21 @@
-
-// #include "usbd_core.h"
 #include "FreeRTOS.h"
-#include "task.h"
 #include "wifi.h"
+#include "task.h"
 #include "bflb_mtimer.h"
+#include "bflb_gpio.h"
 #include "board.h"
 #include "cam.h"
-
-extern void cdc_acm_init(void);
-extern void cdc_acm_data_send_with_dtr_test(void);
+#include "usb_uart.h"
+#include "config.h"
 int main(void)
 {
     board_init();
-    bflb_mtimer_delay_ms(500);
+    cdc_acm_init();
+    bflb_mtimer_delay_ms(200);
     cam_init();
     wifi_init();
-    // cdc_acm_init();
     vTaskStartScheduler();
-    while(1)
+    while (1)
     {
-        // cdc_acm_data_send_with_dtr_test();
     }
 }

@@ -1,3 +1,4 @@
+#include "usb_uart.h"
 #include "FreeRTOS.h"
 #include "task.h"
 #include "bflb_gpio.h"
@@ -32,7 +33,6 @@ uint32_t jpg_head_len;
 
 uint8_t MJPEG_QUALITY = 50;
 static TaskHandle_t cam_process_task_hd;
-static TaskHandle_t print_task_hd;
 volatile uint32_t jpeg_len = 0;
 
 static __attribute__((aligned(32))) ATTR_NOINIT_PSRAM_SECTION uint8_t dvp_buffer[640 * 2 * ROW_NUM];
@@ -40,11 +40,6 @@ static __attribute__((aligned(32))) ATTR_NOINIT_PSRAM_SECTION uint8_t mjpeg_buff
 void cam_isr(int irq, void *arg)
 {
     bflb_cam_int_clear(cam0, CAM_INTCLR_NORMAL);
-    // BaseType_t pxHigherPriorityTaskWoken = pdFALSE;
-    // vTaskNotifyGiveIndexedFromISR(cam_process_task_hd, DVP_ISR_NOTIFY_INDEX, &pxHigherPriorityTaskWoken);
-    // if (pxHigherPriorityTaskWoken) {
-    //     portYIELD_FROM_ISR(pxHigherPriorityTaskWoken);
-    // }
 }
 void mjpeg_isr(int irq, void *arg)
 {
@@ -56,12 +51,6 @@ void mjpeg_isr(int irq, void *arg)
     if (intstatus & MJPEG_INTSTS_ONE_FRAME) {
         bflb_mjpeg_int_clear(mjpeg, MJPEG_INTCLR_ONE_FRAME); 
         // bflb_mjpeg_int_clear(mjpeg, 1 << 10);
-        // BaseType_t pxHigherPriorityTaskWoken = pdFALSE;
-        // vTaskNotifyGiveIndexedFromISR(cam_process_task_hd, JPEG_ISR_NOTIFY_INDEX, &pxHigherPriorityTaskWoken);
-        // if (pxHigherPriorityTaskWoken) {
-        //     portYIELD_FROM_ISR(pxHigherPriorityTaskWoken);
-        // }
-        // if(datajpeg_len==0)
         
         if(cam_status()==0)
         {
@@ -172,27 +161,6 @@ void cam_probe()
         bflb_mtimer_delay_ms(20);
     }
 }
-void printf_uart(char *buf)
-{
-    int i = 0;
-    while(buf[i])
-    {
-        bflb_uart_putchar(uart0, buf[i]);
-        i++;
-        if(i>100||buf[i]==0)
-        {
-            break;
-        }
-    }
-}
-void print_task(void* param)
-{
-    while(1)
-    {
-        vTaskDelay(1000);
-    }
-}
-
 int cam_status()
 {
     return status_cam;
@@ -212,45 +180,34 @@ uint8_t *cam_data()
 }
 void cam_task(void*param)
 {
-    cam_probe();
-    uint8_t *pic;
-    datajpeg_buf = (char *)malloc(1024 * 100);
-    datajpeg_len = 0;
-    bflb_cam_start(cam0);
-    bflb_mjpeg_start(mjpeg);
     while (1)
     {
-        vTaskDelay(10);
-        // ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+        vTaskDelay(1000);
     }
 }
 void cam_init()
 {
     
-    board_uartx_gpio_init();
-
-    uart0 = bflb_device_get_by_name("uart0");
-
-    struct bflb_uart_config_s cfg;
-
-    cfg.baudrate = 2000000;
-    cfg.data_bits = UART_DATA_BITS_8;
-    cfg.stop_bits = UART_STOP_BITS_1;
-    cfg.parity = UART_PARITY_NONE;
-    cfg.flow_ctrl = 0;
-    cfg.tx_fifo_threshold = 7;
-    cfg.rx_fifo_threshold = 7;
-    cfg.bit_order = UART_LSB_FIRST;
-    bflb_uart_init(uart0, &cfg);
+    datajpeg_buf = (char *)malloc(1024 * 100);
+    datajpeg_len = 0;
+    // board_uartx_gpio_init();
+    // uart0 = bflb_device_get_by_name("uart0");
+    // struct bflb_uart_config_s cfg;
+    // cfg.baudrate = 2000000;
+    // cfg.data_bits = UART_DATA_BITS_8;
+    // cfg.stop_bits = UART_STOP_BITS_1;
+    // cfg.parity = UART_PARITY_NONE;
+    // cfg.flow_ctrl = 0;
+    // cfg.tx_fifo_threshold = 7;
+    // cfg.rx_fifo_threshold = 7;
+    // cfg.bit_order = UART_LSB_FIRST;
+    // bflb_uart_init(uart0, &cfg);
 
     gpio = bflb_device_get_by_name("gpio");
 
     bflb_gpio_init(gpio, PIN_LED, GPIO_OUTPUT | GPIO_PULLUP | GPIO_SMT_EN | GPIO_DRV_0);
 
-    // uart_init(gpio, PIN_TX0, PIN_RX0);
     i2c_init(gpio, PIN_SCL0, PIN_SDA0);
-
-    
     
     bflb_gpio_init(gpio, PIN_CAM_XCLK, GPIO_FUNC_CLKOUT | GPIO_ALTERNATE | GPIO_PULLUP | GPIO_SMT_EN | GPIO_DRV_1);
     bflb_gpio_init(gpio, PIN_CAM_D0, GPIO_FUNC_CAM | GPIO_ALTERNATE | GPIO_PULLUP | GPIO_SMT_EN | GPIO_DRV_1);
@@ -336,6 +293,9 @@ void cam_init()
     bflb_irq_enable(mjpeg->irq_num);
 
     
+    cam_probe();
+    bflb_cam_start(cam0);
+    bflb_mjpeg_start(mjpeg);
+    
     xTaskCreate(cam_task, (char *)"cam_task", 1024, NULL, 14, &cam_process_task_hd);
-    // xTaskCreate(print_task, (char *)"print_task", 1024, NULL, 14, &print_task_hd);
 }
