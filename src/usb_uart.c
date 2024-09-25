@@ -1,5 +1,6 @@
 #include "usb_uart.h"
 #include "config.h"
+#include "bflb_core.h"
 #include "FreeRTOS.h"
 #include "task.h"
 #include "stdarg.h"
@@ -74,14 +75,12 @@ struct usbd_interface intf0;
 struct usbd_interface intf1;
 
 static TaskHandle_t print_task_hd;
+
 void print_task(void *param)
 {
     volatile int i = 0;
     while (1)
     {
-        cdc_print("main loop\n");
-        vTaskDelay(200);
-        cdc_printf("i=%d\n", i);
         vTaskDelay(200);
         i++;
     }
@@ -120,5 +119,5 @@ void cdc_printf(const char *fmt, ...)
     va_start(args, fmt);
     vsnprintf(write_buffer, 511, fmt, args);
     va_end(args);
-    cdc_print(buf);
+    cdc_print(write_buffer);
 }
