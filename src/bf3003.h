@@ -224,7 +224,7 @@ static struct image_sensor_command_s bf3003_init_list[] = {
 	/*
 		insert the dummy line after active line(Dummy line high 8bits) 
 	*/
-	{BF3003_AE_MODE, 0b11000000},
+	{BF3003_AE_MODE, 0b01000000},
 	/*
 	Bit[7]: AE mode select:
 		0: use Y (from color space module).
@@ -302,6 +302,7 @@ static struct image_sensor_command_s bf3003_init_list[] = {
 	{BF3003_GLB_GAIN_MIN, 0x00},
 	{BF3003_GLB_GAIN_MAX, 0xFF},
 	{BF3003_GLB_GAIN, 0x10},
+	{0, 0},
 };
 
 

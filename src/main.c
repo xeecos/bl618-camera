@@ -7,6 +7,7 @@
 #include "cam.h"
 #include "usb_uart.h"
 #include "config.h"
+
 int main(void)
 {
     board_init();

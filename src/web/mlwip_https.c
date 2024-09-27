@@ -11,8 +11,8 @@ static const unsigned char data__camera_html[] = { 0x3c, 0x21, 0x64, 0x6f, 0x63,
 
 void http_server_thread(void *msg);
 int get_http_command(char *http_msg, char *command);
-char *datajpeg_buf;
-uint32_t datajpeg_len = 0;
+extern char *datajpeg_buf;
+extern uint32_t datajpeg_len = 0;
 // u8 stream_buf[15000];
 u8 streatask = 0;
 u8 mysemaphoreflag = 0;
