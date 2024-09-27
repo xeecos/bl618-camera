@@ -9,7 +9,6 @@
 #include "bflb_pwm_v2.h"
 #include "bf3003.h"
 #include "config.h"
-#include "sensor.h"
 #include "uart.h"
 #include "i2c.h"
 #include "jpeg_head.h"

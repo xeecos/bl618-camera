@@ -11,8 +11,10 @@
 #include <netdb.h>
 
 #include "cam.h"
+#include "microphone.h"
 #include "utils_getopt.h"
 #include "bflb_mtimer.h"
+
 
 uint8_t recv_buf[512] = {0};
 uint64_t recv_len = 0;
@@ -85,6 +87,31 @@ void service_init()
                         recv_len = recvfrom(sock, recv_buf, 1024, 0, (struct sockaddr *)&remote_addr, &addr_len);
                     }
                 }
+                #if 0
+                audio_set_status(0);
+                while (audio_status() == 0);
+                int len = 8*1000;
+                char *msg_count = (char *)malloc(64);
+                sprintf(msg_count,"len:%d\n\0", len);
+                sendto(sock, msg_count, strlen(msg_count), 0, (struct sockaddr *)&remote_addr, addr_len);
+                recv_len = recvfrom(sock, recv_buf, 1024, 0, (struct sockaddr *)&remote_addr, &addr_len);
+                free(msg_count);
+                int count = (int)(len/1024)+1;
+                for (int i = 0; i < count; i++)
+                {
+                    sendto(sock, audio_data() + i * 1024, len < 1024 ? len : 1024, 0, (struct sockaddr *)&remote_addr, addr_len);
+                    // bflb_mtimer_delay_ms(1);
+                    len -= 1024;
+                    if(len<0)
+                    {
+                        break;
+                    }
+                    else
+                    {
+                        recv_len = recvfrom(sock, recv_buf, 1024, 0, (struct sockaddr *)&remote_addr, &addr_len);
+                    }
+                }
+                #endif
             }
         }
         closesocket(sock);

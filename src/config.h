@@ -1,6 +1,6 @@
 #pragma once
-#define PIN_TX0          21
-#define PIN_RX0          20
+#define PIN_AUDIO_L      22
+#define PIN_AUDIO_R      20
 #define PIN_TX1          0
 #define PIN_RX1          1
 #define PIN_SD_D0        11

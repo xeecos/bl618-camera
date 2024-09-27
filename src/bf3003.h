@@ -1,6 +1,6 @@
 #pragma once
 
-#include "sensor.h"
+#include "image_sensor.h"
 
 #define BF3003_ADDR                 0x6E
 #define BF3003_PID                  0xFC
