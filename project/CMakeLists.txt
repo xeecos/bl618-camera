@@ -8,6 +8,7 @@ sdk_add_include_directories(../src)
 
 target_sources(app PRIVATE 
     ../src/microphone.c
+    ../src/led.c
     ../src/cam.c
     ../src/wifi.c
     ../src/service.c

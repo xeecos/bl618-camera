@@ -13,6 +13,7 @@
 #include "i2c.h"
 #include "jpeg_head.h"
 #include "cam.h"
+#include "led.h"
 
 static struct bflb_device_s *uart0;
 static struct bflb_device_s *gpio;
@@ -21,9 +22,8 @@ static struct bflb_device_s *mjpeg;
 volatile int status_cam = 0;
 uint8_t *datajpeg_buf;
 uint32_t datajpeg_len;
-#define MJPEG_BUFFER_LENGTH (60 * 1024 * CAM_FRAME_COUNT_USE)
-#define DVP_BUFFER_LENGTH (480 * 2 * 640)
-volatile int led = 0;
+#define MJPEG_BUFFER_LENGTH (60 * 1024)
+#define DVP_BUFFER_LENGTH (ROW_NUM * 2 * 640)
 
 uint8_t jpg_head_buf[800] = { 0 };
 uint32_t jpg_head_len;
@@ -37,14 +37,6 @@ static __attribute__((aligned(32))) ATTR_NOINIT_PSRAM_SECTION uint8_t mjpeg_buff
 void cam_isr(int irq, void *arg)
 {
     bflb_cam_int_clear(cam0, CAM_INTCLR_NORMAL);
-    // uint8_t *pic;
-    // int len = bflb_cam_get_frame_info(cam0, &pic);
-    if (led)
-        bflb_gpio_set(gpio, PIN_LED);
-    else 
-        bflb_gpio_reset(gpio, PIN_LED);
-    led = 1-led;
-    bflb_cam_pop_one_frame(cam0);
 }
 void mjpeg_isr(int irq, void *arg)
 {
@@ -55,7 +47,7 @@ void mjpeg_isr(int irq, void *arg)
     int frame = 0;
     if (intstatus & MJPEG_INTSTS_ONE_FRAME) {
         bflb_mjpeg_int_clear(mjpeg, MJPEG_INTCLR_ONE_FRAME); 
-        // bflb_mjpeg_int_clear(mjpeg, 1 << 10);
+        bflb_mjpeg_int_clear(mjpeg, 1 << 10);
         
         if(cam_status()==0)
         {
@@ -63,11 +55,7 @@ void mjpeg_isr(int irq, void *arg)
             memcpy(datajpeg_buf, pic, len);
             datajpeg_len = len;
             cam_set_status(1);
-            if (led)
-                bflb_gpio_set(gpio, PIN_LED);
-            else 
-                bflb_gpio_reset(gpio, PIN_LED);
-            led = 1-led;
+            light_toggle();
         }
         frame = 1;
     }
@@ -141,29 +129,14 @@ void cam_probe()
             break;
         }
 		printf("ver:%x\n",ver);
-        if (i == 0)
-        {
-            bflb_gpio_set(gpio, PIN_LED);
-        }
-        else
-        {
-            bflb_gpio_reset(gpio, PIN_LED);
-        }
-        i = 1 - i;
+        light_toggle();
         bflb_mtimer_delay_ms(200);
     }
     i = 0;
     while (1)
     {
         cam_sensor_write(bf3003_init_list[i].address, bf3003_init_list[i].paramete);
-        if (i % 2 == 0)
-        {
-            bflb_gpio_set(gpio, PIN_LED);
-        }
-        else
-        {
-            bflb_gpio_reset(gpio, PIN_LED);
-        }
+        light_toggle();
         bflb_mtimer_delay_ms(20);
         i++;
         if(bf3003_init_list[i].address == 0 && bf3003_init_list[i].paramete == 0)
@@ -193,9 +166,10 @@ void cam_task(void*param)
 {
     while (1)
     {
-        vTaskDelay(1000);
+        vTaskDelay(10);
     }
 }
+
 void cam_init()
 {
     
@@ -216,11 +190,9 @@ void cam_init()
 
     gpio = bflb_device_get_by_name("gpio");
 
-    bflb_gpio_init(gpio, PIN_LED, GPIO_OUTPUT | GPIO_PULLUP | GPIO_SMT_EN | GPIO_DRV_0);
-
     i2c_init(gpio, PIN_SCL0, PIN_SDA0);
-    
     cam_probe();
+
     bflb_gpio_init(gpio, PIN_CAM_XCLK, GPIO_FUNC_CLKOUT | GPIO_ALTERNATE | GPIO_PULLUP | GPIO_SMT_EN | GPIO_DRV_1);
     bflb_gpio_init(gpio, PIN_CAM_D0, GPIO_FUNC_CAM | GPIO_ALTERNATE | GPIO_PULLUP | GPIO_SMT_EN | GPIO_DRV_1);
     bflb_gpio_init(gpio, PIN_CAM_D1, GPIO_FUNC_CAM | GPIO_ALTERNATE | GPIO_PULLUP | GPIO_SMT_EN | GPIO_DRV_1);
@@ -230,27 +202,25 @@ void cam_init()
     bflb_gpio_init(gpio, PIN_CAM_D5, GPIO_FUNC_CAM | GPIO_ALTERNATE | GPIO_PULLUP | GPIO_SMT_EN | GPIO_DRV_1);
     bflb_gpio_init(gpio, PIN_CAM_D6, GPIO_FUNC_CAM | GPIO_ALTERNATE | GPIO_PULLUP | GPIO_SMT_EN | GPIO_DRV_1);
     bflb_gpio_init(gpio, PIN_CAM_D7, GPIO_FUNC_CAM | GPIO_ALTERNATE | GPIO_PULLUP | GPIO_SMT_EN | GPIO_DRV_1);
-    bflb_gpio_init(gpio, PIN_CAM_HREF, GPIO_FUNC_CAM | GPIO_ALTERNATE | GPIO_PULLUP | GPIO_SMT_EN | GPIO_DRV_1);
-    bflb_gpio_init(gpio, PIN_CAM_VSYNC, GPIO_FUNC_CAM | GPIO_ALTERNATE | GPIO_PULLUP | GPIO_SMT_EN | GPIO_DRV_1);
-    bflb_gpio_init(gpio, PIN_CAM_PIXCLK, GPIO_FUNC_CAM | GPIO_ALTERNATE | GPIO_PULLUP | GPIO_SMT_EN | GPIO_DRV_1);
+    bflb_gpio_init(gpio, PIN_CAM_HREF, GPIO_FUNC_CAM | GPIO_ALTERNATE | GPIO_PULLUP | GPIO_SMT_EN | GPIO_DRV_0);
+    bflb_gpio_init(gpio, PIN_CAM_VSYNC, GPIO_FUNC_CAM | GPIO_ALTERNATE | GPIO_PULLUP | GPIO_SMT_EN | GPIO_DRV_0);
+    bflb_gpio_init(gpio, PIN_CAM_PIXCLK, GPIO_FUNC_CAM | GPIO_ALTERNATE | GPIO_PULLUP | GPIO_SMT_EN | GPIO_DRV_0);
 
-    bflb_gpio_init(gpio, PIN_CAM_XCLK, GPIO_FUNC_PWM0 | GPIO_ALTERNATE | GPIO_SMT_EN | GPIO_DRV_1);
+    // bflb_gpio_init(gpio, PIN_CAM_XCLK, GPIO_FUNC_PWM0 | GPIO_ALTERNATE | GPIO_SMT_EN | GPIO_DRV_1);
     
-    /* period = .XCLK / .clk_div / .period = 40MHz / 2 / 10 = 2000KHz */
-    struct bflb_pwm_v2_config_s cfg_pwm = {
-        .clk_source = BFLB_SYSTEM_XCLK,
-        .clk_div = 2,
-        .period = 4,
-    };
+    // /* period = .XCLK / .clk_div / .period = 40MHz / 2 / 4 = 5000KHz */
+    // struct bflb_pwm_v2_config_s cfg_pwm = {
+    //     .clk_source = BFLB_SYSTEM_XCLK,
+    //     .clk_div = 2,
+    //     .period = 4,
+    // };
 
-    struct bflb_device_s *pwm = bflb_device_get_by_name("pwm_v2_0");
-    bflb_pwm_v2_init(pwm, &cfg_pwm);
-    bflb_pwm_v2_channel_set_threshold(pwm, PWM_CH3, 1, 3); 
-    bflb_pwm_v2_channel_positive_start(pwm, PWM_CH3);
-    bflb_pwm_v2_start(pwm);
-    while(1){
-    }
-
+    // struct bflb_device_s *pwm = bflb_device_get_by_name("pwm_v2_0");
+    // bflb_pwm_v2_init(pwm, &cfg_pwm);
+    // bflb_pwm_v2_channel_set_threshold(pwm, PWM_CH3, 1, 3); 
+    // bflb_pwm_v2_channel_positive_start(pwm, PWM_CH3);
+    // bflb_pwm_v2_start(pwm);
+    
     cam0 = bflb_device_get_by_name("cam0");
     struct bflb_cam_config_s cam_config;
     struct image_sensor_config_s *sensor_config = &bf3003_config;
@@ -261,7 +231,7 @@ void cam_init()
     bflb_irq_enable(cam0->irq_num);
 
     memcpy(&cam_config, sensor_config, IMAGE_SENSOR_INFO_COPY_SIZE);
-    cam_config.with_mjpeg = false;
+    cam_config.with_mjpeg = true;
     cam_config.input_source = CAM_INPUT_SOURCE_DVP;
     cam_config.output_format = CAM_OUTPUT_FORMAT_AUTO;
     cam_config.output_bufaddr = (uint32_t) dvp_buffer;

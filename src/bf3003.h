@@ -148,7 +148,7 @@ static struct image_sensor_command_s bf3003_init_list[] = {
 		06h: G3HR5,B5G3L 07h: G3LR5,B5G3H
 		08h: G6B2H,B3LR5 09h: G6R2H,R3LB5
 	*/
-	{BF3003_COM8, 0b00010111},
+	{BF3003_COM8, 0b00110111},
 	/*
 		Auto mode Contrl
 		Bit[7:6] reserved
@@ -224,7 +224,7 @@ static struct image_sensor_command_s bf3003_init_list[] = {
 	/*
 		insert the dummy line after active line(Dummy line high 8bits) 
 	*/
-	{BF3003_AE_MODE, 0b01000000},
+	{BF3003_AE_MODE, 0b10000000},
 	/*
 	Bit[7]: AE mode select:
 		0: use Y (from color space module).
@@ -256,7 +256,7 @@ static struct image_sensor_command_s bf3003_init_list[] = {
 		0: Select {0x89[5],0x9E[7:0]} as Banding Filter Value.
 		1: Select {0x89[4],0x9D[7:0]} as Banding Filter Value
 	*/
-	{BF3003_TEST_MODE, 0b00000000},
+	{BF3003_TEST_MODE, 0b10000000},
 	/*
 	BIT[7] : 
 		1: test pattern enable
