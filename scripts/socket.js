@@ -7,7 +7,30 @@ let timeout = 0;
 let client = dgram.createSocket('udp4');
 let bufArray = [];
 let jpegLength = 0;
-client.addListener("message", (msg) =>
+fs.writeFileSync("./tmp.pcm", "");
+// const Speaker = require('speaker');
+
+// // 创建一个新的Speaker实例
+// const speaker = new Speaker({
+//     channels: 1,          // 2 通道（立体声）
+//     bitDepth: 16,         // 每个样本的位数
+//     sampleRate: 32000,    // 样本率
+//     float: true,          // 不使用浮点数
+//     signed: true,
+//     samplesPerFrame:8
+// });
+function writeBuffer (buf)
+{
+    return new Promise(resolve =>
+    { 
+        speaker.write(buf, () =>
+        {
+            console.log("done")
+        });
+        resolve();  
+    });
+}
+client.addListener("message", async (msg) =>
 {
     let jpegEnd = false;
     if (msg.byteLength < 64)
@@ -18,9 +41,22 @@ client.addListener("message", (msg) =>
             jpegLength = str.split("len:")[1] * 1;
             console.log("jpegLength:", jpegLength);
         }
-        request();
+        bufArray = [];
+        capture();
         return;
     }
+    fs.appendFileSync("./tmp.pcm", msg);
+    // for (let i = 0; i < msg.byteLength; i++)
+    // {
+    //     bufArray.push(msg[i]);
+    // }
+    // if (bufArray.length >= 8000)
+    // {
+    //     console.log("msg:", bufArray.length);
+    //     await writeBuffer(Buffer.from(bufArray));
+    // }
+    capture();
+    return;
     for (let i = 0; i < msg.byteLength-1; i++)
     {
         if (msg[i] == 0xff && msg[i+1] == 0xd8)
@@ -75,7 +111,7 @@ function capture ()
             // console.timeEnd("capture");
             console.log("TIMEOUT!!!!!\n");
             capture();
-        }, 60);
+        }, 1000);
     });
 }
 function request ()

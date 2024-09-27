@@ -7,7 +7,7 @@ find_package(bouffalo_sdk REQUIRED HINTS $ENV{BL_SDK_BASE})
 sdk_add_include_directories(../src)
 
 target_sources(app PRIVATE 
-    # ../src/sensor.c
+    ../src/microphone.c
     ../src/cam.c
     ../src/wifi.c
     ../src/service.c

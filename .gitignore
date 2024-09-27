@@ -35,3 +35,4 @@ build
 .pio
 .DS_Store
 *.jpg
+node_modules
