@@ -19,7 +19,7 @@ int main(void)
     #ifdef MICROPHONE_ENABLED
     microphone_init();
     #endif
-    // wifi_init();
+    wifi_init();
     vTaskStartScheduler();
     while (1) {
         bflb_mtimer_delay_ms(100);

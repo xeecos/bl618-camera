@@ -256,7 +256,7 @@ static struct image_sensor_command_s bf3003_init_list[] = {
 		0: Select {0x89[5],0x9E[7:0]} as Banding Filter Value.
 		1: Select {0x89[4],0x9D[7:0]} as Banding Filter Value
 	*/
-	{BF3003_TEST_MODE, 0b10000000},
+	{BF3003_TEST_MODE, 0b00000000},
 	/*
 	BIT[7] : 
 		1: test pattern enable

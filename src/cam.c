@@ -37,6 +37,7 @@ static __attribute__((aligned(32))) ATTR_NOINIT_PSRAM_SECTION uint8_t mjpeg_buff
 void cam_isr(int irq, void *arg)
 {
     bflb_cam_int_clear(cam0, CAM_INTCLR_NORMAL);
+            // light_toggle();bflb_cam_pop_one_frame(cam0);
 }
 void mjpeg_isr(int irq, void *arg)
 {
@@ -202,9 +203,9 @@ void cam_init()
     bflb_gpio_init(gpio, PIN_CAM_D5, GPIO_FUNC_CAM | GPIO_ALTERNATE | GPIO_PULLUP | GPIO_SMT_EN | GPIO_DRV_1);
     bflb_gpio_init(gpio, PIN_CAM_D6, GPIO_FUNC_CAM | GPIO_ALTERNATE | GPIO_PULLUP | GPIO_SMT_EN | GPIO_DRV_1);
     bflb_gpio_init(gpio, PIN_CAM_D7, GPIO_FUNC_CAM | GPIO_ALTERNATE | GPIO_PULLUP | GPIO_SMT_EN | GPIO_DRV_1);
-    bflb_gpio_init(gpio, PIN_CAM_HREF, GPIO_FUNC_CAM | GPIO_ALTERNATE | GPIO_PULLUP | GPIO_SMT_EN | GPIO_DRV_0);
-    bflb_gpio_init(gpio, PIN_CAM_VSYNC, GPIO_FUNC_CAM | GPIO_ALTERNATE | GPIO_PULLUP | GPIO_SMT_EN | GPIO_DRV_0);
-    bflb_gpio_init(gpio, PIN_CAM_PIXCLK, GPIO_FUNC_CAM | GPIO_ALTERNATE | GPIO_PULLUP | GPIO_SMT_EN | GPIO_DRV_0);
+    bflb_gpio_init(gpio, PIN_CAM_HREF, GPIO_FUNC_CAM | GPIO_ALTERNATE | GPIO_PULLUP | GPIO_SMT_EN | GPIO_DRV_1);
+    bflb_gpio_init(gpio, PIN_CAM_VSYNC, GPIO_FUNC_CAM | GPIO_ALTERNATE | GPIO_PULLUP | GPIO_SMT_EN | GPIO_DRV_1);
+    bflb_gpio_init(gpio, PIN_CAM_PIXCLK, GPIO_FUNC_CAM | GPIO_ALTERNATE | GPIO_PULLUP | GPIO_SMT_EN | GPIO_DRV_1);
 
     // bflb_gpio_init(gpio, PIN_CAM_XCLK, GPIO_FUNC_PWM0 | GPIO_ALTERNATE | GPIO_SMT_EN | GPIO_DRV_1);
     
@@ -241,7 +242,7 @@ void cam_init()
     // uint32_t regval = getreg32(cam0->reg_base);
     // regval |= (0b000 << 0x8);
     // putreg32(regval, cam0->reg_base);
-    // bflb_cam_feature_control(cam0, CAM_CMD_COUNT_TRIGGER_NORMAL_INT, 1);
+    bflb_cam_feature_control(cam0, CAM_CMD_COUNT_TRIGGER_NORMAL_INT, 1);
     // bflb_cam_feature_control(cam0, CAM_CMD_WRAP_MODE, 1);
     
     mjpeg = bflb_device_get_by_name("mjpeg");
