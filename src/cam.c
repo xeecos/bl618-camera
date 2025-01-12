@@ -15,7 +15,6 @@
 #include "cam.h"
 #include "led.h"
 
-static struct bflb_device_s *uart0;
 static struct bflb_device_s *gpio;
 static struct bflb_device_s *cam0;
 static struct bflb_device_s *mjpeg;
@@ -191,6 +190,7 @@ void cam_init()
 
     gpio = bflb_device_get_by_name("gpio");
 
+    uart_init(gpio);
     i2c_init(gpio, PIN_SCL0, PIN_SDA0);
     cam_probe();
 
