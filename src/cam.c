@@ -190,7 +190,6 @@ void cam_init()
     // bflb_uart_init(uart0, &cfg);
 
     gpio = bflb_device_get_by_name("gpio");
-
     uart_init(gpio);
     firmata_init();
     while(1)
@@ -207,6 +206,7 @@ void cam_init()
         firmata_end();
         uart_write(firmata_get(),firmata_length());
         bflb_mtimer_delay_ms(200);
+        light_toggle();
     }
     i2c_init(gpio, PIN_SCL0, PIN_SDA0);
     cam_probe();

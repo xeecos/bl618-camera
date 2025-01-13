@@ -26,8 +26,8 @@ void uart_isr(int irq, void *arg)
 }
 void uart_init(struct bflb_device_s * gpio)
 {
-    bflb_gpio_uart_init(gpio, GPIO_PIN_0, GPIO_UART_FUNC_UART1_TX);
-    bflb_gpio_uart_init(gpio, GPIO_PIN_1, GPIO_UART_FUNC_UART1_RX);
+    bflb_gpio_uart_init(gpio, GPIO_PIN_1, GPIO_UART_FUNC_UART1_TX);
+    bflb_gpio_uart_init(gpio, GPIO_PIN_0, GPIO_UART_FUNC_UART1_RX);
     uartx = bflb_device_get_by_name("uart1");
     struct bflb_uart_config_s cfg;
     cfg.baudrate = 115200;
