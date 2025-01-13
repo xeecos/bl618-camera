@@ -14,6 +14,7 @@ target_sources(app PRIVATE
     ../src/service.c
     ../src/web/mlwip_https.c
     ../src/usb_uart.c
+    ../src/firmata.c
     ../src/uart.c
     ../src/i2c.c
     ../src/jpeg_head.c

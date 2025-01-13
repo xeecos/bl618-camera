@@ -14,6 +14,7 @@
 #include "jpeg_head.h"
 #include "cam.h"
 #include "led.h"
+#include "firmata.h"
 
 static struct bflb_device_s *gpio;
 static struct bflb_device_s *cam0;
@@ -191,6 +192,22 @@ void cam_init()
     gpio = bflb_device_get_by_name("gpio");
 
     uart_init(gpio);
+    firmata_init();
+    while(1)
+    {
+        firmata_start();
+        firmata_write(0);
+        firmata_write(0);
+        firmata_end();
+        uart_write(firmata_get(),firmata_length());
+        bflb_mtimer_delay_ms(200);
+        firmata_start();
+        firmata_write(0);
+        firmata_write(1);
+        firmata_end();
+        uart_write(firmata_get(),firmata_length());
+        bflb_mtimer_delay_ms(200);
+    }
     i2c_init(gpio, PIN_SCL0, PIN_SDA0);
     cam_probe();
 
