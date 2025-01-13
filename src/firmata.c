@@ -17,7 +17,7 @@ void firmata_init()
 void firmata_start()
 {
     mSendBuf[0] = 0xf0;
-    mSendIdx++;
+    mSendIdx = 1;
 }
 void firmata_end()
 {
